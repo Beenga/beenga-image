@@ -43,7 +43,7 @@ same Hugging Face organisation.
 | Optimiser | adamw8bit, lr 1e-4, flowmatch scheduler, bf16, quantised |
 | Resolutions | 512 / 768 / 1024 |
 | Hardware | 1× NVIDIA A40 48 GB, ~35 min |
-| Training data | 200 images, **100% synthetic** (Z-Image Turbo, Apache-2.0), uncurated |
+| Training data | 200 images, **100% synthetic** (Z-Image Turbo, Apache-2.0) |
 | Real photographs | 0% |
 
 **Why it is not released.** Explicit control survived — asked for pin-straight hair, it renders
@@ -65,8 +65,7 @@ The step-500 checkpoint is the best of the three; step 1500 is visibly overtrain
 | Real photographs | 0% | — | none used |
 
 No scraped data, no stock imagery, no images of identifiable real people, no user-contributed
-photographs. Wikimedia Commons was evaluated and rejected: images old enough to be public
-domain are 19th-century monochrome, which carries no complexion information.
+photographs.
 
 ## Benchmark methodology
 
@@ -84,12 +83,12 @@ human judging images — subjective, not reproducible, and a real limitation of 
 
 ## Results
 
-| Defect | Fix | Cost |
-|---|---|---|
-| Generic Indian prompts default to traditional/ceremonial | prompt layer | $0 |
-| "Clean-shaven" renders stubble | prompt layer — five stacked positive restatements, 6/6 | $0 |
-| Requested deep complexions render lighter | prompt layer, per-tone stacks; luma monotonic across 7 tones over 42 images | $0 |
-| Soft/salon curls collapse under attribute load | LoRA — trained, leaks, not released | ~$6.50 GPU |
+| Defect | Fix |
+|---|---|
+| Generic Indian prompts default to traditional/ceremonial | prompt layer |
+| "Clean-shaven" renders stubble | prompt layer — five stacked positive restatements, 6/6 |
+| Requested deep complexions render lighter | prompt layer, per-tone stacks; luma monotonic across 7 tones over 42 images |
+| Soft/salon curls collapse under attribute load | LoRA — trained, not released |
 
 ## Known limitations
 
