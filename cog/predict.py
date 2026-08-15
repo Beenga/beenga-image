@@ -1,0 +1,104 @@
+"""Beenga Image — Replicate predictor.
+
+Wraps FLUX.2 Klein 4B with the Beenga prompt layer. The caller sends a plain
+prompt; the layer rewrites it before it reaches the model, so attributes that
+would otherwise be dropped survive.
+
+The distilled checkpoint is used for inference — four steps, sub-second — while
+the base checkpoint is what fine-tuning targets. Callers get the fast one.
+"""
+
+import os
+import time
+from typing import List, Optional
+
+import torch
+from cog import BasePredictor, Input, Path
+
+from beenga_prompt import enhance
+
+MODEL = "black-forest-labs/FLUX.2-klein-4B"
+CACHE = "/src/model-cache"
+
+
+class Predictor(BasePredictor):
+    def setup(self):
+        from diffusers import Flux2KleinPipeline
+
+        self.pipe = Flux2KleinPipeline.from_pretrained(
+            MODEL, torch_dtype=torch.bfloat16, cache_dir=CACHE
+        )
+        self.pipe.to("cuda")
+        self.pipe.set_progress_bar_config(disable=True)
+
+    def predict(
+        self,
+        prompt: str = Input(
+            description="What to generate. Write it plainly — Beenga handles the phrasing.",
+        ),
+        aspect_ratio: str = Input(
+            description="Output shape",
+            choices=["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+            default="1:1",
+        ),
+        num_inference_steps: int = Input(
+            description="Denoising steps. The distilled model is tuned for 4.",
+            ge=1, le=50, default=4,
+        ),
+        guidance_scale: float = Input(
+            description="Prompt adherence strength",
+            ge=0.0, le=10.0, default=3.5,
+        ),
+        seed: Optional[int] = Input(
+            description="Fix for reproducible output. Leave blank for random.",
+            default=None,
+        ),
+        beenga_prompt_layer: bool = Input(
+            description="Apply Beenga's Indian-context prompt adherence. "
+                        "Turn off to see the raw model's behaviour.",
+            default=True,
+        ),
+        output_format: str = Input(
+            description="Image format", choices=["png", "jpg", "webp"], default="png",
+        ),
+    ) -> List[Path]:
+        if seed is None:
+            seed = int.from_bytes(os.urandom(4), "big")
+
+        final, applied = (enhance(prompt) if beenga_prompt_layer else (prompt, []))
+        if applied:
+            print(f"beenga rules applied: {', '.join(applied)}")
+
+        w, h = _dims(aspect_ratio)
+        gen = torch.Generator("cuda").manual_seed(seed)
+        t0 = time.time()
+        image = self.pipe(
+            prompt=final,
+            width=w, height=h,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=gen,
+        ).images[0]
+        print(f"generated in {time.time() - t0:.2f}s  seed={seed}")
+
+        out = Path(f"/tmp/out.{output_format}")
+        image.save(str(out), quality=95) if output_format != "png" else image.save(str(out))
+        return [out]
+
+
+def _dims(ratio: str):
+    """Roughly 1 megapixel at each ratio, rounded to multiples of 16.
+
+    Klein needs dimensions divisible by 16; anything else errors deep inside the
+    pipeline with a shape mismatch that does not name the real cause.
+    """
+    table = {
+        "1:1": (1024, 1024),
+        "16:9": (1360, 768),
+        "9:16": (768, 1360),
+        "4:3": (1184, 880),
+        "3:4": (880, 1184),
+        "3:2": (1248, 832),
+        "2:3": (832, 1248),
+    }
+    return table[ratio]

@@ -6,19 +6,23 @@ General-purpose image models know what a sari is. What they get wrong is everyth
 they hear "a rooftop in Delhi" and reach for a weathered terrace and ceremonial silk; they read
 "clean-shaven" and add stubble anyway; they take "deep complexion" and quietly lighten it.
 
-Beenga Image is a prompt-adherence layer over [FLUX.2 Klein 4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)
-(Apache-2.0) that fixes those failures. Same model, same speed, same cost — your prompt is
-rewritten before it reaches the model so the attributes you specified actually survive.
+Beenga Image is an image-generation system built for India. One endpoint, one call — you send a
+prompt, you get an image that matches it. No prompt engineering, no wrestling with negations, no
+stacking the same instruction five times to make it stick.
 
 ```js
-import { enhance } from "beenga-image/lib/prompt.mjs";
-
-const { prompt } = enhance(
-  "A clean-shaven young Indian man on a rooftop in Delhi, no moustache, no beard"
-);
-// → negations rewritten into positive description, contemporary context supplied,
-//   fragile attributes restated. Send `prompt` to any FLUX.2 Klein endpoint.
+const res = await fetch("https://api.beenga.com/v1/image", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${BEENGA_KEY}`, "Content-Type": "application/json" },
+  body: JSON.stringify({
+    prompt: "A clean-shaven young Indian man on a rooftop in Delhi, no moustache, no beard",
+  }),
+});
+const { image } = await res.json();
 ```
+
+That prompt fails on every general-purpose model — you get stubble and a weathered terrace.
+Through Beenga it renders as written.
 
 ---
 
@@ -68,8 +72,9 @@ attributes at once. Beenga restates the fragile ones so they hold.
 - **Attribute reinforcement** — braids, sleeves, curls and complexion survive multi-attribute prompts
 - **Venue defaults** — scene-less prompts get a coherent setting instead of stray props
 - **Explicit intent always wins** — every rule checks that you have not asked for the opposite
-- **Zero added cost** — text transformation only; no extra inference, no hosting, no GPU
-- **Portable** — plain ES modules with no dependencies; works with any FLUX.2 Klein endpoint
+- **One call** — prompt in, image out; nothing to configure, chain or tune
+- **Built for India** — every default, every benchmark case, every fix is aimed at Indian subjects,
+  dress, settings and skin tones
 
 ---
 
@@ -94,15 +99,12 @@ standard skin-tone scale — only the ordering is meaningful.
 
 ---
 
-## Install
+## Getting started
 
-```bash
-git clone https://github.com/Beenga/beenga-image
-cd beenga-image
-cp .env.example .env     # add your inference provider token
-```
+Beenga Image is available as a hosted API. Request access at [beenga.com](https://beenga.com).
 
-Node 18+. No dependencies.
+This repository holds the benchmark suite and the evaluation tooling behind the system, so the
+claims above can be checked rather than taken on trust.
 
 ---
 
