@@ -19,6 +19,7 @@ from beenga_prompt import enhance
 
 MODEL = "black-forest-labs/FLUX.2-klein-4B"
 CACHE = "/src/model-cache"
+CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 
 
 class Predictor(BasePredictor):
@@ -30,6 +31,23 @@ class Predictor(BasePredictor):
         )
         self.pipe.to("cuda")
         self.pipe.set_progress_bar_config(disable=True)
+        self.lora_loaded = False
+
+    def _set_curl_lora(self, on):
+        """Load or unload the curl adapter without rebuilding the pipeline.
+
+        Kept opt-in. Benchmarked at out/bench/SCORES.md: it sharpens salon-curl
+        geometry and leaves explicitly-straight hair alone, but it also shifts
+        the default for UNSPECIFIED hair toward curly and pulls its training
+        set's flatter look into unrelated scenes. Enabled by default that would
+        tax every generation to fix one attribute, so the caller chooses.
+        """
+        if on and not self.lora_loaded:
+            self.pipe.load_lora_weights(CURL_LORA, adapter_name="curl")
+            self.lora_loaded = True
+        elif not on and self.lora_loaded:
+            self.pipe.unload_lora_weights()
+            self.lora_loaded = False
 
     def predict(
         self,
@@ -53,6 +71,11 @@ class Predictor(BasePredictor):
             description="Fix for reproducible output. Leave blank for random.",
             default=None,
         ),
+        curl_enhance: bool = Input(
+            description="Sharpen salon-curl geometry using Beenga's curl adapter. "
+                        "Off by default: it also nudges unspecified hair toward curly.",
+            default=False,
+        ),
         beenga_prompt_layer: bool = Input(
             description="Apply Beenga's Indian-context prompt adherence. "
                         "Turn off to see the raw model's behaviour.",
@@ -65,6 +88,7 @@ class Predictor(BasePredictor):
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "big")
 
+        self._set_curl_lora(curl_enhance)
         final, applied = (enhance(prompt) if beenga_prompt_layer else (prompt, []))
         if applied:
             print(f"beenga rules applied: {', '.join(applied)}")

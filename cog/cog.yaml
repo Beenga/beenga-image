@@ -25,7 +25,20 @@ build:
     - "peft"
     - "pillow"
   run:
-    - "mkdir -p /src/model-cache"
+    # Bake the checkpoint into the image. The first build left it to download at
+    # boot to keep the push small — and the very first prediction then sat in
+    # `starting` for over twenty minutes pulling ~15GB. Replicate scales public
+    # models to zero, so that cost would be paid on every cold start, by users.
+    # A one-off larger push is the right trade.
+    - "mkdir -p /src/model-cache /src/loras"
+    - "pip install --no-cache-dir huggingface_hub"
+    - "python3 -c \"from huggingface_hub import snapshot_download; snapshot_download('black-forest-labs/FLUX.2-klein-4B', cache_dir='/src/model-cache')\""
+    # Cog's base setup symlinks `python3` but not `python`, then its own
+    # post-build step runs `python -m pip freeze` and dies with
+    # "exec python failed: No such file or directory" — after the image has
+    # already built and exported successfully, which makes it look like a build
+    # failure when it is a packaging-step failure.
+    - "ln -sf $(command -v python3) /usr/local/bin/python"
 
 predict: "predict.py:Predictor"
 
