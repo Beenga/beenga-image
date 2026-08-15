@@ -125,6 +125,45 @@ const WOMEN_WEAR = [
 // hair that read as barely wavy, and one sample came out essentially straight.
 // These push harder toward visible curl while staying clear of the tight-ringlet
 // end the bucket exists to avoid.
+// ── Hair-geometry classes for curl_type v2 ───────────────────────────────────
+//
+// v1 failed the benchmark and this is why. All 200 of its images carried the
+// same caption — "soft loose salon curls" — from a single generator. With
+// nothing straight, tight or coily in the set, the adapter could not learn that
+// curl geometry is SEPARABLE from everything else in frame. It shifted the
+// default for unspecified hair toward curly and dragged the training set's
+// whole look along with it: plainer backgrounds, ordinary faces, neutral
+// expressions, applied regardless of prompt.
+//
+// Contrast classes are the fix. The target concept only becomes learnable as a
+// distinct axis when the set also contains what it is NOT. Each class carries
+// its own honest caption; none is a throwaway.
+const HAIR_CLASSES = [
+  { id: "salon_curls", weight: 3,
+    gen: "long black hair in large soft spiral curls, clearly defined loose coils falling past the shoulders, salon-styled with plenty of body",
+    cap: "soft loose salon curls, beauty-parlour blowout curls, gentle curled hair" },
+  { id: "blowout_waves", weight: 2,
+    gen: "long black hair in big soft blowout waves, wide relaxed S-shaped bends, brushed out and glossy",
+    cap: "soft blowout waves, loose curled hair, salon-styled waves" },
+  { id: "tight_ringlets", weight: 2,
+    gen: "long black hair in tight springy ringlets, small narrow corkscrew curls packed densely",
+    cap: "tight ringlets, small corkscrew curls, tightly curled hair" },
+  { id: "coily", weight: 1,
+    gen: "black hair in dense tight coils, compact springy coil pattern close to the head",
+    cap: "coily hair, tightly coiled texture, natural tight curl pattern" },
+  { id: "natural_waves", weight: 2,
+    gen: "long black hair with gentle natural waves, soft undulations, untreated and unstyled",
+    cap: "naturally wavy hair, loose natural waves, unstyled" },
+  { id: "pin_straight", weight: 3,
+    gen: "long black hair, perfectly pin-straight and smooth from root to tip, sleek and flat with no bend at all",
+    cap: "pin-straight hair, perfectly straight smooth hair, sleek and flat" },
+];
+
+// Expand by weight so the target concept is well represented without the set
+// collapsing to a single class. Straight is weighted equally with salon curls
+// on purpose: it is the anchor that stops the adapter making curls the default.
+const HAIR_POOL = HAIR_CLASSES.flatMap((c) => Array(c.weight).fill(c));
+
 const CURL_SHAPE = [
   "large soft spiral curls that fall in clearly defined loose coils past the shoulders",
   "voluminous bouncy curls with deep rounded curl loops, salon-styled",
@@ -169,7 +208,33 @@ export const BUCKETS = {
       `wearing ${pick(MEN_WEAR, i * 7)}, ${pick(SETTING, i * 11)}, realistic photography`,
   },
 
-  /** Teach: "soft curls", "salon curls", "loose curls", "beauty-parlour curls". */
+  /**
+   * v2 — teaches curl GEOMETRY as a separable axis, not "Indian woman -> curls".
+   *
+   * Six hair classes including three the target is not (tight ringlets, coily,
+   * pin-straight), each honestly captioned. 120 candidates to curate down to
+   * 50-100, rather than 200 uncurated.
+   */
+  curl_type_v2: {
+    id: "curl_type_v2",
+    target: 120,
+    defect: "IND-MULTI-001 — soft/salon curls collapse into tight ringlets under attribute load",
+    model: "prunaai/z-image-turbo",
+    genPrompt: (i) => {
+      const c = HAIR_POOL[i % HAIR_POOL.length];
+      return `${pick(HAIR_FRAMING, i)} of ${pick(WOMEN_AGE, i)} Indian woman, ${c.gen}, ` +
+        `${pick(COMPLEXION, i)}, ${pick(BUILD, i * 5)}, wearing ${pick(WOMEN_WEAR, i * 7)}, ` +
+        `${pick(SETTING, i * 11)}, ${pick(LIGHT, i * 13)}, realistic photography, natural skin texture`;
+    },
+    caption: (i) => {
+      const c = HAIR_POOL[i % HAIR_POOL.length];
+      return `an Indian woman with ${c.cap}, ${pick(WOMEN_AGE, i).replace("a ", "")}, ` +
+        `${pick(COMPLEXION, i)}, wearing ${pick(WOMEN_WEAR, i * 7)}, ` +
+        `${pick(SETTING, i * 11)}, realistic photography`;
+    },
+  },
+
+  /** v1 — kept for reference. Trained, benchmarked, leaked. See out/bench/SCORES.md. */
   curl_type: {
     id: "curl_type",
     target: 200,
