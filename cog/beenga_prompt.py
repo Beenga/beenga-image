@@ -73,8 +73,7 @@ VENUE = re.compile(
     r"studio|club|bar|party|cafe|café|restaurant|kitchen|garden|park|beach|"
     r"street|road|campus|college|school|office|mall|metro|station|temple|"
     r"wedding|venue|floor|courtyard|lawn|field|outdoors|indoors)\w*\b", re.I)
-DANCE_VENUE = ("The setting is an ordinary domestic living room with a sofa, a rug "
-               "and plain walls.")
+DANCE_VENUE = "An ordinary domestic living room."
 
 
 # --- 2c. hair realism -------------------------------------------------------
