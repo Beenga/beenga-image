@@ -146,6 +146,25 @@ def _pick_look(s):
         h = (h * 31 + ord(ch)) & 0xFFFFFFFF
     return SARI_LOOKS[h % len(SARI_LOOKS)]
 
+
+# --- house look -------------------------------------------------------------
+# Beenga's commercial default: North Indian, fair, sharp-featured, and for men
+# clean-shaven. One rule rather than four — each addition dilutes the rest.
+# Departs from the original spec's anti-default stance by choice, and yields the
+# moment the user states a complexion, ethnicity, beauty level or facial hair.
+COMPLEXION_STATED = re.compile(r"\b(fair|wheatish|dusky|deep|dark|medium|light|olive|"
+                               r"complexion|skin\s+tone|melanated)\b", re.I)
+LOOK_STATED = re.compile(r"\b(ordinary|average|plain|everyday|unremarkable|documentary|"
+                         r"realistic\s+skin|natural\s+variation|glamorous|model-?like)\b", re.I)
+MALE = re.compile(r"\b(man|men|male|guy|boy|gentleman|groom|father|dad|brother|son)\b", re.I)
+FEMALE_ONLY = re.compile(r"\b(woman|women|female|girl|lady|ladies|bride|mother|sister|"
+                         r"daughter)\b", re.I)
+# A named Indian place or region overrides the North India default.
+INDIAN_PLACE = re.compile(r"\b(chennai|madras|bengaluru|bangalore|hyderabad|kochi|cochin|trivandrum|kerala|tamil|telugu|kannada|malayalam|mysore|coimbatore|madurai|vizag|visakhapatnam|kolkata|calcutta|bengali|bangla|assam|odisha|orissa|bhubaneswar|goa|konkan|marathi|mumbai|bombay|pune|nagpur|gujarat|gujarati|ahmedabad|surat|rajasthan|rajasthani|jaipur|jodhpur|udaipur|punjab|punjabi|amritsar|chandigarh|haryana|kashmir|kashmiri|himachal|uttarakhand|bihar|bihari|patna|jharkhand|chhattisgarh|manipur|naga|mizo|khasi|sikkim|north\s*east|northeast|south\s+india|south\s+indian|east\s+india|west\s+india|north\s+india|north\s+indian|delhi|lucknow|kanpur|varanasi|agra)\b", re.I)
+HOUSE_REGION = "North Indian appearance, "
+HOUSE_LOOK = "fair complexion, sharp well-defined features, conventionally attractive."
+HOUSE_LOOK_MALE = " Clean-shaven with a smooth bare upper lip and jawline."
+
 # --- 3. fragile attributes --------------------------------------------------
 SHAVE_STACK = ("completely clean-shaven face, perfectly smooth freshly shaved cheeks, "
                "smooth bare upper lip, smooth chin and jawline, zero facial hair")
@@ -246,6 +265,15 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
         if not WANTS_MIDRIFF.search(raw):
             tail.append(MODEST_DRAPE)
             applied.append("modest-drape")
+
+    if (PERSON.search(raw) and not FOREIGN.search(raw)
+            and not TRADITIONAL_INTENT.search(raw)
+            and not COMPLEXION_STATED.search(raw) and not LOOK_STATED.search(raw)):
+        male = bool(MALE.search(raw)) and not FEMALE_ONLY.search(raw)
+        region = "" if INDIAN_PLACE.search(raw) else HOUSE_REGION
+        tail.append(region + HOUSE_LOOK
+                    + (HOUSE_LOOK_MALE if male and not WANTS_HAIR.search(raw) else ""))
+        applied.append("house-look")
 
     if PERSON.search(raw) and not NON_PHOTO.search(raw):
         tail.append(HAIR_REALISM)
