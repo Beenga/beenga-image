@@ -76,6 +76,49 @@ VENUE = re.compile(
 DANCE_VENUE = ("The setting is an ordinary domestic living room with a sofa, a rug "
                "and plain walls.")
 
+
+# --- 2c. hair realism -------------------------------------------------------
+# Klein renders hair as a solid moulded mass with a hard, high hairline — one of
+# the strongest tells that an image is generated. Naming the fine detail pushes
+# back: measured on one seed, this restored flyaway strands, a soft hairline with
+# baby hairs, and real scalp detail. Skipped for non-photographic styles.
+NON_PHOTO = re.compile(r"\b(cartoon|anime|illustration|illustrated|painting|painted|"
+                       r"sketch|drawing|3d\s+render|cgi|pixar|vector|comic)\b", re.I)
+PERSON = re.compile(r"\b(woman|man|girl|boy|lady|person|people|child|student|model|"
+                    r"portrait|face|hair)\b", re.I)
+HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catching the "
+                "light, soft natural hairline with baby hairs at the temples, realistic "
+                "scalp and hair root detail.")
+
+# --- 2d. garment variety ----------------------------------------------------
+# Every unqualified "sari" came back as the same teal-blue silk with a gold zari
+# border, so a batch of generations looks like one photoshoot. When no fabric or
+# colour is named, pick one deterministically from the prompt text — the same
+# prompt and seed must still reproduce, so this cannot use a random source.
+SARI = re.compile(r"\b(sari|saree)\b", re.I)
+FABRIC_OR_COLOUR = re.compile(
+    r"\b(silk|cotton|chiffon|georgette|linen|handloom|khadi|organza|banarasi|"
+    r"kanjivaram|red|blue|green|yellow|pink|purple|orange|black|white|cream|"
+    r"maroon|teal|mustard|ivory|beige|grey|gray|navy|coral|lavender|turquoise|"
+    r"magenta)\b", re.I)
+SARI_LOOKS = [
+    "a soft cotton handloom sari in a warm mustard tone with a thin contrasting border",
+    "a light chiffon sari in dusty rose with a narrow silver edge",
+    "a crisp cotton sari in off-white with a fine indigo stripe",
+    "a georgette sari in deep green with a plain matte finish",
+    "a linen sari in terracotta with an unadorned selvedge",
+    "a printed cotton sari in faded coral with small block-print motifs",
+    "a handwoven khadi sari in slate grey with a plain border",
+    "a soft silk sari in aubergine with a restrained narrow border",
+]
+
+
+def _pick_look(s):
+    h = 0
+    for ch in s:
+        h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+    return SARI_LOOKS[h % len(SARI_LOOKS)]
+
 # --- 3. fragile attributes --------------------------------------------------
 SHAVE_STACK = ("completely clean-shaven face, perfectly smooth freshly shaved cheeks, "
                "smooth bare upper lip, smooth chin and jawline, zero facial hair")
@@ -160,6 +203,14 @@ def enhance(raw, contemporary=True, reinforce=True):
     if DANCE.search(raw) and not VENUE.search(raw):
         tail.append(DANCE_VENUE)
         applied.append("dance-venue-default")
+
+    if SARI.search(raw) and not FABRIC_OR_COLOUR.search(raw):
+        tail.append(f"The sari is {_pick_look(raw)}.")
+        applied.append("sari-variety")
+
+    if PERSON.search(raw) and not NON_PHOTO.search(raw):
+        tail.append(HAIR_REALISM)
+        applied.append("hair-realism")
 
     if reinforce:
         recap = []
