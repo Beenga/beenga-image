@@ -83,8 +83,9 @@ DANCE_VENUE = "An ordinary domestic living room."
 # baby hairs, and real scalp detail. Skipped for non-photographic styles.
 NON_PHOTO = re.compile(r"\b(cartoon|anime|illustration|illustrated|painting|painted|"
                        r"sketch|drawing|3d\s+render|cgi|pixar|vector|comic)\b", re.I)
-PERSON = re.compile(r"\b(woman|man|girl|boy|lady|person|people|child|student|model|"
-                    r"portrait|face|hair)\b", re.I)
+PERSON = re.compile(r"\b(woman|women|man|men|girl|boy|lady|ladies|person|people|"
+                    r"couple|friends?|family|group|crowd|child|children|kid|student|"
+                    r"model|portrait|face|hair|male|female|guy|gentleman|bride|groom)\b", re.I)
 HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catching the "
                 "light, soft natural hairline with baby hairs at the temples, realistic "
                 "scalp and hair root detail.")
@@ -160,7 +161,9 @@ MALE = re.compile(r"\b(man|men|male|guy|boy|gentleman|groom|father|dad|brother|s
 FEMALE_ONLY = re.compile(r"\b(woman|women|female|girl|lady|ladies|bride|mother|sister|"
                          r"daughter)\b", re.I)
 # A named Indian place or region overrides the North India default.
-INDIAN_PLACE = re.compile(r"\b(chennai|madras|bengaluru|bangalore|hyderabad|kochi|cochin|trivandrum|kerala|tamil|telugu|kannada|malayalam|mysore|coimbatore|madurai|vizag|visakhapatnam|kolkata|calcutta|bengali|bangla|assam|odisha|orissa|bhubaneswar|goa|konkan|marathi|mumbai|bombay|pune|nagpur|gujarat|gujarati|ahmedabad|surat|rajasthan|rajasthani|jaipur|jodhpur|udaipur|punjab|punjabi|amritsar|chandigarh|haryana|kashmir|kashmiri|himachal|uttarakhand|bihar|bihari|patna|jharkhand|chhattisgarh|manipur|naga|mizo|khasi|sikkim|north\s*east|northeast|south\s+india|south\s+indian|east\s+india|west\s+india|north\s+india|north\s+indian|delhi|lucknow|kanpur|varanasi|agra)\b", re.I)
+# Only NON-northern places override the default; naming Delhi should reinforce a
+# North Indian look, not suppress it.
+INDIAN_PLACE = re.compile(r"\b(chennai|madras|bengaluru|bangalore|hyderabad|kochi|cochin|trivandrum|kerala|tamil|telugu|kannada|malayalam|mysore|coimbatore|madurai|vizag|visakhapatnam|kolkata|calcutta|bengali|bangla|assam|odisha|orissa|bhubaneswar|goa|konkan|marathi|mumbai|bombay|pune|nagpur|gujarat|gujarati|ahmedabad|surat|manipur|naga|mizo|khasi|sikkim|north\s*east|northeast|south\s+india|south\s+indian|east\s+india|west\s+india|andhra|karnataka|maharashtra)\b", re.I)
 HOUSE_REGION = "North Indian appearance, "
 HOUSE_LOOK = "fair complexion, sharp well-defined features, conventionally attractive."
 HOUSE_LOOK_MALE = " Clean-shaven with a smooth bare upper lip and jawline."
