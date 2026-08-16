@@ -365,7 +365,7 @@ FRAGILE = [
 ]
 
 
-def enhance(raw, contemporary=True, reinforce=True, variant=""):
+def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
     """Apply the Beenga prompt layer. Returns (prompt, applied_rule_names)."""
     applied = []
     out = raw
@@ -375,25 +375,30 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
             out = re.sub(pattern, positive, out, flags=re.I)
             applied.append("negation")
 
+    # Segments carry their rule id so the budget assembler can tier them. With
+    # budget off this is exactly the old list of strings in the old order.
     tail = []
 
+    def add(rid, text, keep=None):
+        tail.append({"id": rid, "text": text, "keep": keep})
+
     if contemporary and INDIA.search(raw) and not TRADITIONAL_INTENT.search(raw):
-        tail.append(CONTEMPORARY)
+        add("contemporary-default", CONTEMPORARY)
         applied.append("contemporary-default")
         if not GARMENT.search(raw):
-            tail.append(MODERN_DRESS)
+            add("modern-dress-default", MODERN_DRESS)
             applied.append("modern-dress-default")
 
     if DANCE.search(raw) and not VENUE.search(raw):
-        tail.append(DANCE_VENUE)
+        add("dance-venue-default", DANCE_VENUE)
         applied.append("dance-venue-default")
 
     if SARI.search(raw):
         if not FABRIC_OR_COLOUR.search(raw):
-            tail.append(f"The sari is {_pick_look(raw + variant)}.")
+            add("sari-variety", f"The sari is {_pick_look(raw + variant)}.")
             applied.append("sari-variety")
         if not WANTS_MIDRIFF.search(raw):
-            tail.append(MODEST_DRAPE)
+            add("modest-drape", MODEST_DRAPE)
             applied.append("modest-drape")
 
     if (PERSON.search(raw) and not FOREIGN.search(raw)
@@ -401,30 +406,33 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
             and not COMPLEXION_STATED.search(raw) and not LOOK_STATED.search(raw)):
         male = bool(MALE.search(raw)) and not FEMALE_ONLY.search(raw)
         region = "" if INDIAN_PLACE.search(raw) else HOUSE_REGION
-        tail.append(region + HOUSE_LOOK
-                    + (HOUSE_LOOK_MALE if male and not WANTS_HAIR.search(raw) else ""))
+        male_tail = HOUSE_LOOK_MALE if male and not WANTS_HAIR.search(raw) else ""
+        # The clean-shaven default is grooming, not decoration — it survives
+        # trimming even when the rest of the house look does not.
+        add("house-look", region + HOUSE_LOOK + male_tail,
+            keep=region + RULE_BUDGET["house-look"]["terse"] + male_tail)
         applied.append("house-look")
 
     if PERSON.search(raw) and not NON_PHOTO.search(raw):
-        tail.append(HAIR_REALISM)
+        add("hair-realism", HAIR_REALISM)
         applied.append("hair-realism")
 
     if not LIGHTING.search(raw):
-        tail.append(DAYLIGHT)
+        add("daylight-default", DAYLIGHT)
         applied.append("daylight-default")
 
     for pat, icon in DEITY_ICONS:
         if pat.search(raw):
-            tail.append(icon)
+            add("deity-icon", icon)
             applied.append("deity-icon")
             break
 
     if PERSON.search(raw) and not SETTING_NAMED.search(raw):
-        tail.append(f"The setting is {SCENES[_hash(raw + variant) % len(SCENES)]}.")
+        add("scene-variety", f"The setting is {SCENES[_hash(raw + variant) % len(SCENES)]}.")
         applied.append("scene-variety")
 
     if not DOF.search(raw):
-        tail.append(DEEP_FOCUS)
+        add("deep-focus", DEEP_FOCUS)
         applied.append("deep-focus")
 
     if reinforce:
@@ -434,14 +442,21 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
             if hit:
                 recap.append(say)
         if recap:
-            tail.extend(recap)
+            for say in recap:
+                add("reinforce", say)
             applied.append(f"reinforce:{len(recap)}")
 
     if tail:
-        out = out.strip()
-        if not out.endswith("."):
-            out += "."
-        out = out + " " + " ".join(tail)
+        if budget:
+            limit = BUDGET_WORDS if budget is True else budget
+            segs = _spend_budget(tail, limit)
+        else:
+            segs = [t["text"] for t in tail]
+        if segs:
+            out = out.strip()
+            if not out.endswith("."):
+                out += "."
+            out = out + " " + " ".join(segs)
 
     return out, applied
 
@@ -533,3 +548,43 @@ def rule_costs():
             "dynamic": bool(r.get("dynamic")),
         })
     return out
+
+
+def _spend_budget(segs, limit):
+    """Spend a word budget across tail segments.
+
+    Tier 1 — what the user actually asked for — is always kept at full strength
+    and takes the first claim. Tiers 2 and 3 then compete for what remains: full
+    form if it fits, terse form if that fits, dropped if neither does.
+
+    Segments are emitted in their ORIGINAL order, not tier order. Reordering
+    would change the prompt's structure as well as its length, and this change
+    is hard enough to evaluate with one variable moving.
+    """
+    def w(s):
+        return len(s.strip().split())
+
+    def meta(rid):
+        return RULE_BUDGET.get(rid, {"tier": 2, "terse": None})
+
+    chosen = {}
+    spent = 0
+
+    for i, s in enumerate(segs):
+        if meta(s["id"])["tier"] == 1:
+            chosen[i] = s["text"]
+            spent += w(s["text"])
+
+    for tier in (2, 3):
+        for i, s in enumerate(segs):
+            if meta(s["id"])["tier"] != tier or i in chosen:
+                continue
+            terse = s.get("keep") or meta(s["id"])["terse"] or s["text"]
+            if spent + w(s["text"]) <= limit:
+                chosen[i] = s["text"]
+                spent += w(s["text"])
+            elif spent + w(terse) <= limit:
+                chosen[i] = terse
+                spent += w(terse)
+
+    return [chosen[i] for i in sorted(chosen)]
