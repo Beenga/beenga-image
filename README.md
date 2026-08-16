@@ -41,8 +41,12 @@ FLUX cannot negate. "no moustache" contributes the token *moustache* and nothing
 why asking for a clean-shaven man keeps returning stubble. Beenga rewrites every negation into a
 positive description of the wanted state, and stacks it.
 
-> **clean-shaven, no beard, no moustache** — correct on 6 of 6 across the full complexion and age
-> range, where the raw prompt failed on 3 of 4.
+> **clean-shaven, no beard, no moustache** — **8 of 12 renders come back clean with the layer,
+> against 0 of 12 without it.** Six prompts spanning age and complexion, two seeds each. The four
+> misses show light residual stubble rather than a beard, and all four fall on the same seed.
+>
+> Scored by eye, so subjective — the images are in `out/shave-eval/` and the sweep is
+> reproducible with a fixed seed. This is an improvement, not a solved problem.
 
 ### Contemporary India is the default
 

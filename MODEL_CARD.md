@@ -99,9 +99,35 @@ human judging images — subjective, not reproducible, and a real limitation of 
 | Defect | Fix |
 |---|---|
 | Generic Indian prompts default to traditional/ceremonial | prompt layer |
-| "Clean-shaven" renders stubble | prompt layer — five stacked positive restatements, 6/6 |
+| "Clean-shaven" renders stubble | prompt layer — 8/12 clean vs 0/12 raw; see *Grooming* below |
 | Requested deep complexions render lighter | prompt layer, per-tone stacks; luma monotonic across 7 tones over 42 images |
 | Soft/salon curls collapse under attribute load | LoRA — served opt-in, partially fixed |
+
+## Grooming — re-measured 2026-08-16
+
+An earlier version of this card claimed 6/6 on clean-shaven. That figure did not survive
+re-measurement and has been replaced.
+
+Six prompts spanning age (20s, 40s, middle-aged) and complexion (unspecified, deep, very deep),
+in both phrasings users actually type — `clean-shaven ... no beard, no moustache` and
+`clean shave` — at two seeds each, with the layer on and off. 24 images, in `out/shave-eval/`.
+
+| | Clean | Residual stubble |
+|---|---|---|
+| Layer on | **8 / 12** | 4 / 12 |
+| Layer off | **0 / 12** | 12 / 12 |
+
+The four misses show light stubble rather than a beard or moustache, and all four fall on the
+same seed — the failure is seed-dependent, not prompt-dependent.
+
+**The negation rewriting is not obviously the mechanism doing the work.** The two prompts where
+no negation rule fired — `clean shave` with no "no X" phrasing, and a shopkeeper prompt that
+never mentions facial hair — came back clean 4 times out of 4. The four prompts that did fire
+`negation, negation` came back clean 4 times out of 8. The sample is too small to conclude from,
+but it points the other way from the design: restating "no moustache" positively still puts the
+concept in the prompt, and never raising it at all may do better. Worth a proper sweep.
+
+Scoring here is by eye, with the same limitations as every other axis except complexion.
 
 ## Known limitations
 
