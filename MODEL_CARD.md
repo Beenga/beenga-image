@@ -31,9 +31,8 @@ image
 | Licence | Apache 2.0 — commercial use permitted |
 | Provider | Black Forest Labs |
 
-**Do not substitute the 9B variant.** BFL releases the 4B models under Apache 2.0 and the 9B
-models under a non-commercial licence. The names differ by two characters and both live in the
-same Hugging Face organisation.
+**Do not substitute the 9B variant.** See *Licence & attribution* below for the
+exact terms and the quantised variants.
 
 ## Adapters
 
@@ -74,7 +73,7 @@ means rebuilding and repushing the image, so it is recorded here rather than qui
 
 | Source | Share | Licence | Notes |
 |---|---|---|---|
-| Z-Image Turbo generations | 100% | Apache 2.0, no output restriction | `datasets/recipes.mjs` |
+| Z-Image Turbo generations | 100% | Apache 2.0 (repo) | `datasets/recipes.mjs` — output terms not separately reviewed |
 | Real photographs | 0% | — | none used |
 
 No scraped data, no stock imagery, no images of identifiable real people, no user-contributed
@@ -165,9 +164,7 @@ Regional facial diversity beyond this is a fine-tune target, not a prompt target
 
 ## Safety
 
-Beenga Image adds no safety capability of its own. The base model's filters and BFL's
-Out-of-Scope Use policy apply. That policy binds conduct separately from the Apache licence,
-which BFL's model card states it does not modify.
+Beenga Image does not currently introduce an independent safety or moderation layer. Deployers are responsible for implementing appropriate safeguards and complying with applicable usage policies.
 
 The prompt layer deliberately supplies *contemporary* defaults for Indian scenes. That is an
 editorial choice, and it is a substitution of one default for another — made because the
@@ -183,15 +180,15 @@ modification and distribution subject to the terms of the licence. Beenga Image 
 under the **Apache License 2.0** — see `LICENSE`.
 
 > **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the
-> **4B** models under Apache 2.0 and the **9B** models under the **FLUX Non-Commercial License
-> v2.1**. The names differ by two characters and both live in the same Hugging Face organisation.
-> Verify the licence of any model you swap in.
+> **4B** models under Apache 2.0 — including `4b-fp8` and `4b-nvfp4` — and the **9B** models under
+> the **FLUX Non-Commercial License v2.1**, with `9b-fp8` additionally gated. The names differ by
+> two characters (`4b-fp8` / `9b-fp8`) and all live in the same Hugging Face organisation. Verify
+> the licence of any model you swap in.
 
 As of 2026-08-15 the `black-forest-labs/flux2` repository ships no `NOTICE` file, so Apache §4(d)
 propagation does not currently apply — recheck if re-vendoring at a later commit.
 
-Use of the underlying model is also subject to Black Forest Labs' Out-of-Scope Use policy, which
-binds conduct separately from the Apache 2.0 copyright licence. See *Safety* above.
+Use may also be subject to Black Forest Labs' applicable usage policies. See *Safety* above.
 
 ### Trademarks
 

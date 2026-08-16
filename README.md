@@ -161,18 +161,16 @@ modification and distribution subject to the terms of the licence. Beenga Image 
 under the **Apache License 2.0** — see [LICENSE](LICENSE).
 
 > **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the
-> **4B** models under Apache 2.0 and the **9B** models under the **FLUX Non-Commercial License
-> v2.1**. The names differ by two characters and both live in the same Hugging Face organisation.
-> Verify the licence of any model you swap in.
+> **4B** models under Apache 2.0 — including `4b-fp8` and `4b-nvfp4` — and the **9B** models under
+> the **FLUX Non-Commercial License v2.1**, with `9b-fp8` additionally gated. The names differ by
+> two characters (`4b-fp8` / `9b-fp8`) and all live in the same Hugging Face organisation. Verify
+> the licence of any model you swap in.
 
-Use of the underlying model is also subject to Black Forest Labs' **Out-of-Scope Use policy**,
-which binds conduct separately from the Apache 2.0 copyright licence.
+Use may also be subject to Black Forest Labs' applicable usage policies.
 
 ### Safety
 
-Beenga Image introduces no independent safety or moderation system — the base model's filters are
-what apply. Applications and hosting providers built on it should add appropriate safeguards and
-comply with the usage policies above.
+Beenga Image does not currently introduce an independent safety or moderation layer. Deployers are responsible for implementing appropriate safeguards and complying with applicable usage policies.
 
 ### Trademarks
 

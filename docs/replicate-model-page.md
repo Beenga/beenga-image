@@ -20,7 +20,7 @@ Every rule in the layer exists because a specific generation failed. The full so
 
 Diffusion models cannot negate. "no moustache" contributes the token *moustache* and nothing else — which is why asking for a clean-shaven man keeps returning stubble. Beenga rewrites every negation into a positive description of the wanted state, and stacks it.
 
-*clean-shaven, no beard, no moustache* — correct on 6 of 6 across the full complexion and age range, where the raw prompt failed on 3 of 4.
+*clean-shaven, no beard, no moustache* — **8 of 12 renders come back clean with the layer, against 0 of 12 without it.** Six prompts spanning age and complexion, two seeds each. The four misses show light residual stubble rather than a beard, and all four fall on the same seed. Scored by eye, so subjective; the sweep is reproducible with a fixed seed. An improvement, not a solved problem.
 
 ### Contemporary India is the default
 
@@ -97,13 +97,13 @@ Warm generations take about 1.7s on an L40S. The model scales to zero, so the fi
 
 FLUX.2 [klein] 4B is released under the **Apache License 2.0**, which permits commercial use, modification and distribution subject to the terms of the licence. Beenga Image is also released under the **Apache License 2.0**.
 
-> **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the **4B** models under Apache 2.0 and the **9B** models under the **FLUX Non-Commercial License v2.1**. The names differ by two characters and both live in the same Hugging Face organisation. Verify the licence of any model you swap in.
+> **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the **4B** models under Apache 2.0 — including `4b-fp8` and `4b-nvfp4` — and the **9B** models under the **FLUX Non-Commercial License v2.1**, with `9b-fp8` additionally gated. The names differ by two characters (`4b-fp8` / `9b-fp8`) and all live in the same Hugging Face organisation. Verify the licence of any model you swap in.
 
-Use of the underlying model is also subject to Black Forest Labs' **Out-of-Scope Use policy**, which binds conduct separately from the Apache 2.0 copyright licence.
+Use may also be subject to Black Forest Labs' applicable usage policies.
 
 ### Safety
 
-Beenga Image introduces no independent safety or moderation system — the base model's filters are what apply. Applications and hosting providers built on it should add appropriate safeguards and comply with the usage policies above.
+Beenga Image does not currently introduce an independent safety or moderation layer. Deployers are responsible for implementing appropriate safeguards and complying with applicable usage policies.
 
 ### Trademarks
 
