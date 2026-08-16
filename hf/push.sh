@@ -50,12 +50,25 @@ if [[ "$DRY_RUN" == "1" ]]; then
   echo "dry run — not uploading"; exit 0
 fi
 
-: "${HF_TOKEN:?set HF_TOKEN (write scope) first}"
 command -v huggingface-cli >/dev/null || pip install -q "huggingface_hub[cli]"
 
+# Either an HF_TOKEN in the environment or a stored `huggingface-cli login`.
+# Note: `whoami` exits 0 even when logged out — it just prints "Not logged in" —
+# so test its output, not its status.
+TOKEN_ARGS=()
+if [[ -n "${HF_TOKEN:-}" ]]; then
+  TOKEN_ARGS=(--token="$HF_TOKEN")
+elif huggingface-cli whoami 2>&1 | grep -qi "not logged in"; then
+  echo "no credentials — do one of:" >&2
+  echo "  export HF_TOKEN=hf_...        # huggingface.co/settings/tokens, write scope" >&2
+  echo "  huggingface-cli login         # interactive" >&2
+  exit 1
+fi
+
+# ${arr[@]+...} guard: bash 3.2 on macOS treats an empty array as unbound under set -u.
 huggingface-cli upload "$REPO" "$STAGE" . \
   --repo-type=model \
-  --token="$HF_TOKEN" \
+  ${TOKEN_ARGS[@]+"${TOKEN_ARGS[@]}"} \
   --commit-message="Publish beenga-curl-v1 (step 500)"
 
 echo
