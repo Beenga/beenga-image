@@ -106,6 +106,11 @@ def _wants_clean_shaven(raw):
 # must still land mid-range.
 FRAGILE = [
     (_wants_clean_shaven, SHAVE_STACK),
+    # "beautiful delhi girl in sari" rendered a woman around thirty, on the raw
+    # model as well as through this layer — Klein maps youth words to roughly 30
+    # whatever you type. Same fix as clean-shaven and complexion: stack it.
+    (re.compile(r"\b(girl|young(\s+\w+){0,2}\s+(woman|man|lady|guy|boy|girl)|teenager|college\s+student|in\s+(her|his)\s+(early\s+)?twenties)\b", re.I),
+     "Clearly a young adult in their early twenties, youthful unlined face, smooth taut young skin, visibly in their early 20s."),
     (re.compile(r"\b(soft|loose|salon|blowout|beauty-?parlou?r)\s+(curls?|waves?)\b", re.I),
      "The hair falls in wide relaxed S-shaped waves with long gentle bends and plenty of loose movement."),
     (re.compile(r"\b(two|2)\s+braids?\b|\btwo\s+plaits\b", re.I),
