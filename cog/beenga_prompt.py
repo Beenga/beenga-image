@@ -52,7 +52,7 @@ INDIA = re.compile(
 TRADITIONAL_INTENT = re.compile(
     r"\b(traditional|classical|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
     r"garba|temple|ritual|ceremon|wedding|bridal|festival|puja|pooja|diwali|"
-    r"navratri|historical|period|ancient|mytholog|village|rural|folk)\w*\b", re.I)
+    r"navratri|historical|period|ancient|mytholog|village|rural|folk|hanuman|krishna|krishn|radha|\brama\b|\bram\b|shiva|shiv\b|vishnu|ganesh|ganpati|lakshmi|laxmi|durga|kali\b|saraswati|brahma|parvati|murugan|ayyappa|venkatesw|balaji|jagannath|nataraj|buddha|mahavir|nanak|sai baba|deity|goddess|\bgod\b|\blord\b|avatar|ramayana|mahabharata|bhagavad|bhakti|devotional|aarti|mandir|idol|murti|shrine|pilgrim|sadhu|saint|yogi|ascetic|epic\b|scripture|vedic|sanskrit)\w*\b", re.I)
 
 CONTEMPORARY = ("Present-day contemporary India, modern well-maintained surroundings, "
                 "clean and tidy environment, current-day styling.")
