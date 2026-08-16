@@ -83,9 +83,37 @@ DANCE_VENUE = "An ordinary domestic living room."
 # baby hairs, and real scalp detail. Skipped for non-photographic styles.
 NON_PHOTO = re.compile(r"\b(cartoon|anime|illustration|illustrated|painting|painted|"
                        r"sketch|drawing|3d\s+render|cgi|pixar|vector|comic)\b", re.I)
-PERSON = re.compile(r"\b(woman|women|man|men|girl|boy|lady|ladies|person|people|"
-                    r"couple|friends?|family|group|crowd|child|children|kid|student|"
-                    r"model|portrait|face|hair|male|female|guy|gentleman|bride|groom)\b", re.I)
+PERSON_WORD = re.compile(r"\b(woman|women|man|men|girl|boy|lady|ladies|person|people|"
+                         r"couple|friends?|family|group|crowd|child|children|kid|student|"
+                         r"model|portrait|face|hair|male|female|guy|gentleman|bride|groom)\b", re.I)
+
+# A prompt can say there is nobody in the picture, and until 2026-08-16 this layer
+# could not hear it: PERSON matched the word "people" INSIDE "no people in frame",
+# so an empty-room still life came back with a house look, hair realism, a randomly
+# chosen setting and the line "The person is Indian, with South Asian features and
+# colouring" — an instruction to draw a person into a scene that asked for none.
+#
+# Found by using the product (demo/romantichive renders still lifes almost
+# exclusively) and invisible to both benchmark suites, where all 41 cases have a
+# person in them.
+#
+# "empty" is qualified rather than matched bare — "a woman holding an empty cup"
+# has a person in it. "still life" is included because it is the genre name.
+NO_PEOPLE = re.compile(
+    r"\b(no|without)\s+(people|persons?|humans?|figures?|models?|subjects?)\b"
+    r"|\bnobody\b|\bno\s+one\b|\bunoccupied\b|\bdeserted\b|\bstill\s+life\b"
+    r"|\bempty\s+(room|street|scene|chair|table|bed|house|office|platform)\b", re.I)
+
+
+class _Person:
+    """Every person rule goes through this, never PERSON_WORD directly."""
+
+    @staticmethod
+    def search(raw):
+        return PERSON_WORD.search(raw) and not NO_PEOPLE.search(raw)
+
+
+PERSON = _Person()
 HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catching the "
                 "light, soft natural hairline with baby hairs at the temples, realistic "
                 "scalp and hair root detail.")
@@ -98,9 +126,18 @@ HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catch
 
 # Klein's default exposure for an unlit prompt is flat and grey. Naming daylight
 # lifts it. Only when the prompt says nothing about light.
+#
+# Times of day that CONTRADICT bright daylight are listed so the default does not
+# fire against them: "a living room sofa in the evening" was coming back with
+# "Bright natural daylight, clear colour." appended.
+#
+# "morning", "afternoon", "noon" are deliberately NOT here. They imply light without
+# contradicting it, and Klein's unlit exposure is flat and grey — a morning prompt
+# still wants the daylight line. Only words that fight it belong in this list.
 LIGHTING = re.compile(r"\b(light|lighting|lit|sunset|sunrise|golden\s+hour|night|dusk|"
-                      r"dawn|shade|shadow|backlit|neon|candle|lamp|studio|overcast|"
-                      r"cloudy|moody|dark|silhouette)\w*\b", re.I)
+                      r"dawn|evening|twilight|midnight|moonlit|moonlight|firelight|"
+                      r"lantern|candlelit|shade|shadow|backlit|neon|candle|lamp|studio|"
+                      r"overcast|cloudy|moody|dim|gloom|dark|silhouette)\w*\b", re.I)
 DAYLIGHT = "Bright natural daylight, clear colour."
 
 
@@ -167,7 +204,25 @@ DEITY_ICONS = [
 # --- scene variety ----------------------------------------------------------
 # The contemporary default said only "modern clean surroundings", so Klein reached
 # for the same apartment walkway every time. Deterministic pick from prompt+seed.
-SETTING_NAMED = re.compile(VENUE.pattern + r"|\b(market|bazaar|temple|gym|shop|beach|hill|"
+# VENUE has "room", but `\broom\w*\b` cannot match the room people actually name:
+# there is no word boundary inside "bedroom". So "a quiet bedroom at night" counted
+# as setting-less and this rule appended "The setting is a metro station platform."
+# — overriding a setting the prompt had already stated. Compound rooms and the rest
+# of a house are matched explicitly; named furniture counts too, since "on the
+# bedside table" locates a scene as surely as naming the room does.
+SETTING_NAMED = re.compile(VENUE.pattern +
+                           # Spelled out rather than \w*room\w*, which would also
+                           # match "groom", "bridegroom", "broom" and "mushroom"
+                           # and silently suppress scene-variety on a wedding shot.
+                           r"|\b(bedroom|bathroom|washroom|restroom|classroom|storeroom|"
+                           r"showroom|ballroom|guestroom|playroom|boardroom|living\s+room|"
+                           r"drawing\s+room|dining\s+room|sitting\s+room|waiting\s+room|"
+                           r"kitchen)\w*\b"
+                           r"|\b(hallway|corridor|landing|porch|doorway|staircase|stairwell|"
+                           r"basement|attic|study|nursery|balcony|verandah|veranda|patio|"
+                           r"driveway|pavement|sidewalk|bedside|sofa|couch|armchair|worktop|"
+                           r"countertop|counter|dresser|nightstand)\w*\b"
+                           r"|\b(market|bazaar|temple|gym|shop|beach|hill|"
                            r"mountain|village|farm|airport|hospital|library|museum|stadium|"
                            r"terrace)\w*\b", re.I)
 SCENES = [

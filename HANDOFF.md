@@ -13,26 +13,37 @@ State of play after one long session. Read this before touching anything.
 - **`benchmarks/beenga-india-v1.json`** — 29 cases derived from the original spec.
 - **`benchmarks/real-world-defects.json`** — 12 cases from actual usage. **More useful
   than the first suite**, which caught none of the defects found by using the product.
+- **`benchmarks/layer-contradictions.json`** — 9 cases checked against the enhanced
+  TEXT, not against an image: the layer must not contradict what the prompt already
+  said. Free and instant, and it covers the one class of bug neither image suite can
+  see (see "Benchmark blindness" below).
 - **`scripts/`** — benchmark runner, complexion scorer, base-model comparison,
   dataset generation, Commons harvester.
 - **`out/lora/`** — a trained curl LoRA. Benchmarked, leaks, shipped as opt-in only.
 
-## Parity check — run this after any prompt-layer edit
+## Check — run this after any prompt-layer edit
 
 ```bash
-python3 - <<'EOF'
-import sys, json, subprocess
-sys.path.insert(0,"cog")
-from beenga_prompt import enhance as py
-cases=json.load(open("benchmarks/beenga-india-v1.json"))["cases"]
-js=json.loads(subprocess.run(["node","-e","""
-import('./lib/prompt.mjs').then(async ({enhance})=>{const fs=await import('node:fs');
-const c=JSON.parse(fs.readFileSync('benchmarks/beenga-india-v1.json','utf8')).cases;
-console.log(JSON.stringify(c.map(x=>enhance(x.prompt).prompt)));});"""],
-capture_output=True,text=True).stdout.strip())
-bad=[c["id"] for c,j in zip(cases,js) if py(c["prompt"])[0].strip()!=j.strip()]
-print("parity:", f"{len(cases)-len(bad)}/{len(cases)}", bad)
-EOF
+node scripts/check-layer.mjs      # exit 0 only if everything below holds
+```
+
+It runs the contradiction suite against the enhanced text in JS, then checks parity
+between `lib/prompt.mjs` and `cog/beenga_prompt.py` across **all three** suites (the
+old hand-rolled snippet only covered the first one), and finally confirms
+`fal/beenga_prompt.py` is still the symlink to `cog/` rather than a copy that has
+started drifting. No GPU, no Replicate calls, no cost.
+
+**Then diff the existing cases against the last commit.** A layer edit that changes
+the output of a case nobody meant to touch is a regression, and parity will not
+catch it — both implementations agree on the wrong answer:
+
+```bash
+git show HEAD:lib/prompt.mjs > /tmp/prompt-old.mjs
+node -e 'const fs=require("fs");Promise.all([import("/tmp/prompt-old.mjs"),import("./lib/prompt.mjs")])
+ .then(([o,n])=>{let c=0;for(const f of ["benchmarks/beenga-india-v1.json","benchmarks/real-world-defects.json"])
+ for(const t of JSON.parse(fs.readFileSync(f,"utf8")).cases)
+ if(o.enhance(t.prompt).prompt!==n.enhance(t.prompt).prompt){c++;console.log("CHANGED",t.id);}
+ console.log(c?c+" changed":"all 41 unchanged");});'
 ```
 
 ## Deploying
@@ -79,7 +90,9 @@ and slow. **Stay on Klein.**
    adding a rule per piece of feedback. Needs a length budget: terse defaults, full
    strength only for attributes the user explicitly asked for.
 2. **Two implementations by hand.** JS and Python drift constantly. Consider generating
-   one from the other, or moving the layer server-side only.
+   one from the other, or moving the layer server-side only. (`fal/beenga_prompt.py` is
+   a symlink to the cog copy, not a third implementation — keep it that way, and
+   `check-layer.mjs` will say so if it stops being one.)
 3. **Cold starts.** Public models scale to zero; a ~70GB image takes minutes to place.
    Fix is a Replicate Deployment with `min_instances=1`, ~$85/mo on an L40S.
 4. **Cultural objects.** Klein does not know tabla, and neither model knows deity
@@ -89,6 +102,18 @@ and slow. **Stay on Klein.**
    suite could not catch, because the rules and the test cases were written from the
    same assumptions. Real-world phrasing variants matter: `clean shave` vs
    `clean-shaven`, `saree`, `lady`, `20s`.
+
+   **2026-08-16, one level up:** *every one of the 41 cases across both image suites
+   contains a person*, so a layer that assumes there is always a subject passed all of
+   them. Using the model on a channel that renders people-free still lifes
+   (`demo/romantichive`) surfaced three contradictions in an afternoon:
+   `no people in frame` → *"The person is Indian…"*, a stated `bedroom` →
+   *"The setting is a metro station platform"*, and `in the evening` →
+   *"Bright natural daylight"*. All three are fixed and are now
+   `benchmarks/layer-contradictions.json`. The lesson generalises: the image suites can
+   only test prompts someone thought to write, and both were written by the same person
+   who wrote the rules. **When a new consumer starts using the model, read what it
+   actually sends before assuming the layer suits it.**
 
 ## Product decisions taken
 

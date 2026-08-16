@@ -124,12 +124,27 @@ The prompt layer deliberately supplies *contemporary* defaults for Indian scenes
 editorial choice, and it is a substitution of one default for another — made because the
 measured baseline skewed heavily ceremonial, not because it is neutral.
 
-## Licence
+## Licence & attribution
 
-Apache 2.0. See `LICENSE`.
+**Beenga Image** is built on [**FLUX.2 [klein] 4B**](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)
+by Black Forest Labs.
 
-Upstream components are Apache 2.0. As of 2026-08-15 the `black-forest-labs/flux2` repository
-ships no `NOTICE` file, so Apache §4(d) propagation does not currently apply — recheck if
-re-vendoring at a later commit.
+FLUX.2 [klein] 4B is released under the **Apache License 2.0**, which permits commercial use,
+modification and distribution subject to the terms of the licence. Beenga Image is also released
+under the **Apache License 2.0** — see `LICENSE`.
 
-"Beenga" is a trademark. Apache 2.0 grants no trademark rights.
+> **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the
+> **4B** models under Apache 2.0 and the **9B** models under the **FLUX Non-Commercial License
+> v2.1**. The names differ by two characters and both live in the same Hugging Face organisation.
+> Verify the licence of any model you swap in.
+
+As of 2026-08-15 the `black-forest-labs/flux2` repository ships no `NOTICE` file, so Apache §4(d)
+propagation does not currently apply — recheck if re-vendoring at a later commit.
+
+Use of the underlying model is also subject to Black Forest Labs' Out-of-Scope Use policy, which
+binds conduct separately from the Apache 2.0 copyright licence. See *Safety* above.
+
+### Trademarks
+
+**Beenga™** is a trademark of Beenga. The Apache License 2.0 grants no permission to use Beenga
+trademarks, logos or branding, except as required for reasonable and customary attribution.

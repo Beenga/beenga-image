@@ -140,12 +140,30 @@ the system, so the claims above can be checked rather than taken on trust.
 
 ---
 
-## Licence
+## Licence & attribution
 
-Apache 2.0 — see [LICENSE](LICENSE).
+**Beenga Image** is built on [**FLUX.2 [klein] 4B**](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)
+by Black Forest Labs.
 
-Built on FLUX.2 Klein 4B from Black Forest Labs, Apache-2.0 and released for commercial use.
-Note that BFL publishes the 4B models under Apache 2.0 and the **9B models under a non-commercial
-licence** — the names differ by two characters.
+FLUX.2 [klein] 4B is released under the **Apache License 2.0**, which permits commercial use,
+modification and distribution subject to the terms of the licence. Beenga Image is also released
+under the **Apache License 2.0** — see [LICENSE](LICENSE).
 
-"Beenga" is a trademark. Apache 2.0 grants no trademark rights.
+> **Check the variant before substituting.** As of 2026-08-16, Black Forest Labs publishes the
+> **4B** models under Apache 2.0 and the **9B** models under the **FLUX Non-Commercial License
+> v2.1**. The names differ by two characters and both live in the same Hugging Face organisation.
+> Verify the licence of any model you swap in.
+
+Use of the underlying model is also subject to Black Forest Labs' **Out-of-Scope Use policy**,
+which binds conduct separately from the Apache 2.0 copyright licence.
+
+### Safety
+
+Beenga Image introduces no independent safety or moderation system — the base model's filters are
+what apply. Applications and hosting providers built on it should add appropriate safeguards and
+comply with the usage policies above.
+
+### Trademarks
+
+**Beenga™** is a trademark of Beenga. The Apache License 2.0 grants no permission to use Beenga
+trademarks, logos or branding, except as required for reasonable and customary attribution.

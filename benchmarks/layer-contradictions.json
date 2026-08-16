@@ -1,0 +1,69 @@
+{
+  "suite": "layer-contradictions",
+  "note": "Cases where the layer must NOT contradict something the prompt already said. Unlike the other two suites these are checked against the ENHANCED TEXT, not against an image — no GPU, no cost, runs in a second (scripts/check-layer.mjs). They exist because the image suites cannot see this class of bug: all 41 cases in beenga-india-v1 and real-world-defects contain a person, so a layer that assumes there is always a person passes both of them. Every case here comes from using the product, and the first three were found by demo/romantichive, whose house style is people-free still lifes.",
+  "cases": [
+    {
+      "id": "LC-NOPEOPLE",
+      "defect": "PERSON matched the word 'people' inside 'no people in frame', so an empty room was given a house look, hair realism and 'The person is Indian' — an instruction to draw a person into a scene that asked for none",
+      "prompt": "a quiet bedroom at night, no people in frame",
+      "must_not_apply": ["house-look", "hair-realism", "scene-variety"],
+      "must_not_contain": ["The person is Indian", "hair strands"]
+    },
+    {
+      "id": "LC-STILLLIFE",
+      "defect": "same as LC-NOPEOPLE via the genre name rather than an explicit negation",
+      "prompt": "a still life of two mugs of tea on a bedside table",
+      "must_not_apply": ["house-look", "hair-realism", "scene-variety"],
+      "must_not_contain": ["The person is Indian"]
+    },
+    {
+      "id": "LC-ROOM",
+      "defect": "VENUE's \\broom\\w*\\b cannot match 'bedroom' — no word boundary inside it — so scene-variety fired on a prompt that had already named the room and appended 'The setting is a metro station platform'",
+      "prompt": "a woman sitting in a bedroom",
+      "must_not_apply": ["scene-variety"],
+      "must_not_contain": ["The setting is"]
+    },
+    {
+      "id": "LC-KITCHEN",
+      "defect": "as LC-ROOM, for the other room a domestic prompt names most often",
+      "prompt": "an indian man cooking in a kitchen",
+      "must_not_apply": ["scene-variety"],
+      "must_not_contain": ["The setting is"]
+    },
+    {
+      "id": "LC-EVENING",
+      "defect": "LIGHTING listed night and dusk but not 'evening', so daylight-default appended 'Bright natural daylight, clear colour.' to a prompt that said evening",
+      "prompt": "a living room sofa in the evening, empty",
+      "must_not_apply": ["daylight-default"],
+      "must_not_contain": ["Bright natural daylight"]
+    },
+    {
+      "id": "LC-TWILIGHT",
+      "defect": "as LC-EVENING, for the other light-fighting time words",
+      "prompt": "a rooftop at twilight",
+      "must_not_apply": ["daylight-default"],
+      "must_not_contain": ["Bright natural daylight"]
+    },
+    {
+      "id": "LC-GUARD-EMPTYCUP",
+      "defect": "GUARD, not a defect: 'empty' next to an object must not suppress the person rules, or every prompt mentioning an empty glass loses its subject",
+      "prompt": "a woman holding an empty cup in Delhi",
+      "must_apply": ["house-look", "hair-realism"],
+      "must_contain": ["The person is Indian"]
+    },
+    {
+      "id": "LC-GUARD-MORNING",
+      "defect": "GUARD, not a defect: 'morning' implies light without contradicting it, so daylight-default must still fire — Klein's unlit exposure is flat and grey",
+      "prompt": "an indian woman in a courtyard in the morning",
+      "must_apply": ["daylight-default"],
+      "must_contain": ["Bright natural daylight"]
+    },
+    {
+      "id": "LC-GUARD-GROOM",
+      "defect": "GUARD, not a defect: matching rooms with \\w*room\\w* would also match 'groom' and silently kill scene-variety on a groom portrait. Note the prompt deliberately avoids the word 'wedding' — VENUE already contains it, so a wedding prompt names a setting for unrelated reasons and would not test this.",
+      "prompt": "an indian groom in a cream sherwani",
+      "must_apply": ["scene-variety"],
+      "must_contain": ["The setting is"]
+    }
+  ]
+}
