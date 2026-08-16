@@ -141,10 +141,11 @@ SHAVE_STACK = ("completely clean-shaven face, perfectly smooth freshly shaved ch
 WANTS_HAIR = re.compile(r"\bstubble\b|\bbeard\b|\bmoustache\b|\bmustache\b|\bgoatee\b", re.I)
 WANTS_NONE = re.compile(
     r"\bno\s+(full\s+)?(beard|moustache|mustache|stubble|facial\s+hair)\b|"
-    r"\bclean[- ]shaven\b|\bzero\s+facial\s+hair\b", re.I)
+    r"\bclean[-\s]?shave[dn]?\b|\bzero\s+facial\s+hair\b|\bshaved\s+face\b", re.I)
 CLEAN_TRIGGER = re.compile(
-    r"\bclean[- ]shaven\b|\bno\s+beard\b|\bno\s+moustache\b|\bno\s+stubble\b|"
-    r"\bno\s+facial\s+hair\b", re.I)
+    r"\bclean[-\s]?shave[dn]?\b|\bno\s+beard\b|\bno\s+moustache\b|"
+    r"\bno\s+stubble\b|\bno\s+facial\s+hair\b|\bshaved\s+face\b|"
+    r"\bsmooth\s+shaven\b", re.I)
 
 
 def _wants_clean_shaven(raw):
