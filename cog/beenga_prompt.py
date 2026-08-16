@@ -165,7 +165,12 @@ FEMALE_ONLY = re.compile(r"\b(woman|women|female|girl|lady|ladies|bride|mother|s
 # North Indian look, not suppress it.
 INDIAN_PLACE = re.compile(r"\b(chennai|madras|bengaluru|bangalore|hyderabad|kochi|cochin|trivandrum|kerala|tamil|telugu|kannada|malayalam|mysore|coimbatore|madurai|vizag|visakhapatnam|kolkata|calcutta|bengali|bangla|assam|odisha|orissa|bhubaneswar|goa|konkan|marathi|mumbai|bombay|pune|nagpur|gujarat|gujarati|ahmedabad|surat|manipur|naga|mizo|khasi|sikkim|north\s*east|northeast|south\s+india|south\s+indian|east\s+india|west\s+india|andhra|karnataka|maharashtra)\b", re.I)
 HOUSE_REGION = "North Indian appearance, "
-HOUSE_LOOK = "fair complexion, sharp well-defined features, conventionally attractive."
+# Complexion is deliberately NOT defaulted. Defaulting fair would repeat the bias
+# this project measured and fixed in other models, in a market where it is a live
+# controversy, and would remove the differentiator. Requested tones are handled by
+# the per-tone stacks; unrequested complexion is left alone.
+HOUSE_LOOK = ("sharp well-defined features, conventionally attractive, "
+              "healthy glowing well-lit skin.")
 HOUSE_LOOK_MALE = " Clean-shaven with a smooth bare upper lip and jawline."
 
 # --- 3. fragile attributes --------------------------------------------------
