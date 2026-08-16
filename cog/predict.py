@@ -123,7 +123,10 @@ class Predictor(BasePredictor):
             seed = int.from_bytes(os.urandom(4), "big")
 
         self._set_curl_lora(curl_enhance)
-        final, applied = (enhance(prompt) if beenga_prompt_layer else (prompt, []))
+        # seed as variant: re-rolling varies unspecified garment choice, while the
+        # same prompt+seed still reproduces byte-for-byte.
+        final, applied = (enhance(prompt, variant=str(seed))
+                          if beenga_prompt_layer else (prompt, []))
         if applied:
             print(f"beenga rules applied: {', '.join(applied)}")
 

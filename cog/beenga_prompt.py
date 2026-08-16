@@ -95,12 +95,28 @@ HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catch
 # border, so a batch of generations looks like one photoshoot. When no fabric or
 # colour is named, pick one deterministically from the prompt text — the same
 # prompt and seed must still reproduce, so this cannot use a random source.
+
+# Klein's default exposure for an unlit prompt is flat and grey. Naming daylight
+# lifts it. Only when the prompt says nothing about light.
+LIGHTING = re.compile(r"\b(light|lighting|lit|sunset|sunrise|golden\s+hour|night|dusk|"
+                      r"dawn|shade|shadow|backlit|neon|candle|lamp|studio|overcast|"
+                      r"cloudy|moody|dark|silhouette)\w*\b", re.I)
+DAYLIGHT = "Bright natural daylight, clear colour."
+
 SARI = re.compile(r"\b(sari|saree)\b", re.I)
 FABRIC_OR_COLOUR = re.compile(
     r"\b(silk|cotton|chiffon|georgette|linen|handloom|khadi|organza|banarasi|"
     r"kanjivaram|red|blue|green|yellow|pink|purple|orange|black|white|cream|"
     r"maroon|teal|mustard|ivory|beige|grey|gray|navy|coral|lavender|turquoise|"
     r"magenta)\b", re.I)
+
+# Midriff coverage. A sari exposes the midsection by default in Klein's prior,
+# and the spec treats visible midriff as opt-in. Stated as drape, not absence.
+WANTS_MIDRIFF = re.compile(r"\b(midriff|bare\s+waist|exposed\s+waist|navel|crop|"
+                           r"bare\s+midsection|low\s+drape)\b", re.I)
+MODEST_DRAPE = ("The pallu passes over the shoulder and falls straight down the back, "
+                "with the sari covering the midsection.")
+
 SARI_LOOKS = [
     "a soft cotton handloom sari in a warm mustard tone with a thin contrasting border",
     "a light chiffon sari in dusty rose with a narrow silver edge",
@@ -181,7 +197,7 @@ FRAGILE = [
 ]
 
 
-def enhance(raw, contemporary=True, reinforce=True):
+def enhance(raw, contemporary=True, reinforce=True, variant=""):
     """Apply the Beenga prompt layer. Returns (prompt, applied_rule_names)."""
     applied = []
     out = raw
@@ -204,13 +220,21 @@ def enhance(raw, contemporary=True, reinforce=True):
         tail.append(DANCE_VENUE)
         applied.append("dance-venue-default")
 
-    if SARI.search(raw) and not FABRIC_OR_COLOUR.search(raw):
-        tail.append(f"The sari is {_pick_look(raw)}.")
-        applied.append("sari-variety")
+    if SARI.search(raw):
+        if not FABRIC_OR_COLOUR.search(raw):
+            tail.append(f"The sari is {_pick_look(raw + variant)}.")
+            applied.append("sari-variety")
+        if not WANTS_MIDRIFF.search(raw):
+            tail.append(MODEST_DRAPE)
+            applied.append("modest-drape")
 
     if PERSON.search(raw) and not NON_PHOTO.search(raw):
         tail.append(HAIR_REALISM)
         applied.append("hair-realism")
+
+    if not LIGHTING.search(raw):
+        tail.append(DAYLIGHT)
+        applied.append("daylight-default")
 
     if reinforce:
         recap = []
