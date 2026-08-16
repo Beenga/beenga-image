@@ -4,7 +4,7 @@
 
 General-purpose image models know what a sari is. What they get wrong is everything around it — they hear "a rooftop in Delhi" and reach for a weathered terrace and ceremonial silk; they read "clean-shaven" and add stubble anyway; they take "deep complexion" and quietly lighten it.
 
-Beenga Image is [FLUX.2 Klein 4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) with a prompt-adherence layer in front of it. You send a plain prompt; the layer rewrites it so the attributes you asked for survive. No prompt engineering, no wrestling with negations, no stacking the same instruction five times to make it stick.
+Beenga Image is a prompt-adherence layer over an Apache-2.0 base model, built for Indian subjects, dress, settings and skin tones. You send a plain prompt; the layer rewrites it so the attributes you asked for survive. No prompt engineering, no wrestling with negations, no stacking the same instruction five times to make it stick.
 
 ```
 prompt: "modern indian man in 20s in gym, shorts and tshirt, clean shave"
@@ -18,7 +18,7 @@ Every rule in the layer exists because a specific generation failed. The full so
 
 ### Negations actually work
 
-FLUX cannot negate. "no moustache" contributes the token *moustache* and nothing else — which is why asking for a clean-shaven man keeps returning stubble. Beenga rewrites every negation into a positive description of the wanted state, and stacks it.
+Diffusion models cannot negate. "no moustache" contributes the token *moustache* and nothing else — which is why asking for a clean-shaven man keeps returning stubble. Beenga rewrites every negation into a positive description of the wanted state, and stacks it.
 
 *clean-shaven, no beard, no moustache* — correct on 6 of 6 across the full complexion and age range, where the raw prompt failed on 3 of 4.
 
@@ -55,7 +55,7 @@ Neither the base model nor its peers know the iconography without being told. Ic
 | Input | Default | What it does |
 |---|---|---|
 | `prompt` | — | Write it plainly. The layer handles the phrasing. |
-| `beenga_prompt_layer` | `true` | Turn off to see raw FLUX.2 Klein behaviour. This is how the comparisons above were produced — flip it to check them yourself. |
+| `beenga_prompt_layer` | `true` | Turn off to see the raw base model's behaviour. This is how the comparisons above were produced — flip it to check them yourself. |
 | `aspect_ratio` | `1:1` | `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3` |
 | `num_inference_steps` | `4` | The distilled checkpoint is tuned for 4. |
 | `guidance_scale` | `3.5` | Ignored by the distilled model, which is step-wise distilled. |
