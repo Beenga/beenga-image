@@ -444,3 +444,92 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
         out = out + " " + " ".join(tail)
 
     return out, applied
+
+
+# --- length budget: rule metadata --------------------------------------------
+#
+# STEP 1 OF THE LENGTH BUDGET. Metadata only — nothing above reads it yet and
+# enhance() is byte-for-byte unchanged. It exists so the cost of each rule is
+# visible in the source rather than only measurable after the fact, and so the
+# assembler that replaces the unconditional appends has something to spend
+# against.
+#
+# Why, measured across both suites, 41 cases:
+#
+#   median user words     20
+#   median words added    81
+#   median words sent    101
+#
+# At the extreme "beautiful delhi girl in sari" — five words — reaches the model
+# as 142, of which the user wrote 4%. The layer built to stop attribute dilution
+# had become the largest single source of it.
+#
+# Not theoretical: identical complexion and hair attributes appended to a
+# ~35-word prompt produce visibly different people; appended to the layer's
+# ~120-word output they produce one face repeatedly. Same attributes, same seed.
+# They were never weak — they were outnumbered.
+#
+# TIERS
+#   1  what the user explicitly asked for. Full strength, first claim on the
+#      budget, never trimmed.
+#   2  conditional on something the user said. Terse unless budget remains.
+#   3  house defaults. Always terse — they fire on every prompt, so every word
+#      is taxed on every generation.
+#
+# `terse` of None means the rule is already at or below target. Word counts are
+# computed, not hand-written, so they cannot drift.
+
+def _words(s):
+    return len(s.strip().split()) if s else 0
+
+
+RULE_BUDGET = {
+    # Tier 3: house defaults, always terse
+    "hair-realism": {
+        "tier": 3, "full": HAIR_REALISM,
+        "terse": "Fine hair strands, soft natural hairline.",
+        # Most expensive rule in the layer, and an anti-AI-tell quality rule
+        # rather than an adherence one. It should never outweigh the request.
+    },
+    "contemporary-default": {
+        "tier": 3, "full": CONTEMPORARY,
+        "terse": "Present-day India, modern surroundings.",
+    },
+    "house-look": {
+        "tier": 3, "full": HOUSE_LOOK,
+        "terse": "Sharp features, attractive.",
+    },
+    "deep-focus": {"tier": 3, "full": DEEP_FOCUS, "terse": "Background in focus."},
+    "daylight-default": {"tier": 3, "full": DAYLIGHT, "terse": None},
+    "modern-dress-default": {"tier": 3, "full": MODERN_DRESS, "terse": None},
+
+    # Tier 2: conditional on what the user said
+    "modest-drape": {
+        "tier": 2, "full": MODEST_DRAPE,
+        "terse": "The pallu covers the shoulder and midriff.",
+    },
+    "sari-variety": {"tier": 2, "full": None, "terse": None, "dynamic": "pick_look"},
+    "scene-variety": {"tier": 2, "full": None, "terse": None, "dynamic": "SCENES"},
+    "deity-icon": {"tier": 2, "full": None, "terse": None, "dynamic": "DEITY_ICONS"},
+    "dance-venue-default": {"tier": 2, "full": DANCE_VENUE, "terse": None},
+
+    # Tier 1: what the user explicitly asked for. Never trimmed.
+    "reinforce": {"tier": 1, "full": None, "terse": None, "dynamic": "FRAGILE"},
+}
+
+# Target ceiling on words the layer may add. Measured, not guessed.
+BUDGET_WORDS = 45
+
+
+def rule_costs():
+    """Current and target added-word cost per rule, for the budget assembler."""
+    out = []
+    for rid, r in RULE_BUDGET.items():
+        out.append({
+            "id": rid,
+            "tier": r["tier"],
+            "full": _words(r["full"]),
+            "terse": _words(r["full"]) if r["terse"] is None else _words(r["terse"]),
+            "dynamic": bool(r.get("dynamic")),
+        })
+    return out
