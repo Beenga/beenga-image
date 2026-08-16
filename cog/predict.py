@@ -77,7 +77,18 @@ class Predictor(BasePredictor):
         tax every generation to fix one attribute, so the caller chooses.
         """
         if on and not self.lora_loaded:
-            self.pipe.load_lora_weights(CURL_LORA, adapter_name="curl")
+            # Directory plus weight_name, never the bare file path. HF_HUB_OFFLINE
+            # is set at the top of this module, and under it lora_state_dict
+            # refuses to guess a filename — it raises "When using the offline
+            # mode, you must specify a `weight_name`" before it ever looks at the
+            # path, so a perfectly valid local file still fails. The two fixes
+            # collided: offline mode is what makes setup survive, and it is what
+            # broke this. Splitting the path satisfies both.
+            self.pipe.load_lora_weights(
+                os.path.dirname(CURL_LORA),
+                weight_name=os.path.basename(CURL_LORA),
+                adapter_name="curl",
+            )
             self.lora_loaded = True
         elif not on and self.lora_loaded:
             self.pipe.unload_lora_weights()

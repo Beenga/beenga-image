@@ -5,9 +5,9 @@
 # Needs a machine with Docker and ~60GB free. Building does not need a GPU, but
 # the CUDA base image and torch wheels are large.
 #
-# Weights are NOT baked into the image. They download at first boot into the
-# cache directory, which keeps the image small enough to push over a normal
-# connection and means a rebuild does not re-upload 15GB of checkpoint.
+# Weights ARE baked into the image, via snapshot_download in the run block
+# below and pushed with --separate-weights. Downloading at first boot was tried
+# and abandoned — see the comment on that step for why.
 build:
   gpu: true
   # 12.4, NOT 12.8. cog maps 12.8 to nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04,

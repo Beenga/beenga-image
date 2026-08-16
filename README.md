@@ -103,8 +103,40 @@ standard skin-tone scale — only the ordering is meaningful.
 
 Beenga Image is available as a hosted API. Request access at [beenga.com](https://beenga.com).
 
-This repository holds the benchmark suite and the evaluation tooling behind the system, so the
-claims above can be checked rather than taken on trust.
+### Run it on Replicate
+
+The model is published as [`beenga/beenga-image-1`](https://replicate.com/beenga/beenga-image-1).
+
+```bash
+export REPLICATE_API_TOKEN=...          # replicate.com/account/api-tokens
+
+curl -s -X POST https://api.replicate.com/v1/predictions \
+  -H "Authorization: Bearer $REPLICATE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: wait" \
+  -d '{
+    "version": "beenga/beenga-image-1",
+    "input": {
+      "prompt": "A clean-shaven young Indian man on a rooftop in Delhi, no moustache, no beard",
+      "aspect_ratio": "3:4"
+    }
+  }'
+```
+
+| Input | Default | What it does |
+|---|---|---|
+| `prompt` | — | Write it plainly. The layer handles the phrasing. |
+| `beenga_prompt_layer` | `true` | Turn off to see the raw FLUX.2 Klein behaviour — this is how the before/after tables above were produced. |
+| `aspect_ratio` | `1:1` | `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3` |
+| `num_inference_steps` | `4` | The distilled checkpoint is tuned for 4. |
+| `seed` | random | Fix it and the same prompt reproduces byte-for-byte. |
+| `curl_enhance` | `false` | Opt-in curl adapter. Read the caveats in [MODEL_CARD.md](MODEL_CARD.md) before enabling it. |
+
+Warm generations take about 1.7s. The model scales to zero, so the first call after an idle
+period pays a cold start of several minutes while a ~70GB image is placed.
+
+This repository holds the prompt layer, the benchmark suite and the evaluation tooling behind
+the system, so the claims above can be checked rather than taken on trust.
 
 ---
 

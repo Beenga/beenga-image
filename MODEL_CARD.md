@@ -1,13 +1,16 @@
 # Model Card — Beenga Image
 
-**Status: pre-release. No weights are published.** This card documents what exists and what
-was measured. It will be updated when a checkpoint is actually released.
+**Status: deployed. The adapter is served, not distributed.** Beenga Image runs in production
+on Replicate. The prompt layer is the product; the curl LoRA ships inside the served image
+behind an opt-in flag, and is not published as a downloadable checkpoint. This card documents
+what exists and what was measured.
 
 ## What Beenga Image is
 
 A prompt-adherence layer over an Apache-2.0 base model, built for contemporary Indian imagery.
 As of this version it is **not a new set of weights** — it is a measured, versioned pipeline.
-A LoRA was trained and did not meet the bar to ship (see *Adapters* below).
+A LoRA was trained; it did not meet the bar to be on by default, and is served opt-in only
+(see *Adapters* below).
 
 ```
 user prompt
@@ -37,7 +40,9 @@ same Hugging Face organisation.
 | | |
 |---|---|
 | Name | `beenga_curl_v1` |
-| Status | **not released** — failed its benchmark |
+| Status | **served opt-in** as `curl_enhance`, default off — did not meet the bar to be a default |
+| Distribution | not published as a downloadable checkpoint |
+| Served checkpoint | step 1500 — see *Outstanding* below, the step-500 checkpoint scored better |
 | Method | LoRA, rank 32, alpha 32 |
 | Steps | 1500 (checkpoints at 500 / 1000 / 1500) |
 | Optimiser | adamw8bit, lr 1e-4, flowmatch scheduler, bf16, quantised |
@@ -46,16 +51,24 @@ same Hugging Face organisation.
 | Training data | 200 images, **100% synthetic** (Z-Image Turbo, Apache-2.0) |
 | Real photographs | 0% |
 
-**Why it is not released.** Explicit control survived — asked for pin-straight hair, it renders
-pin-straight hair. But it shifted the default for *unspecified* hair toward curly, and dragged
-the whole visual style of its training set along with it: plainer backgrounds, more ordinary
-faces, deeper complexions, neutral expressions, applied regardless of prompt.
+**Why it is opt-in rather than on by default.** Explicit control survived — asked for
+pin-straight hair, it renders pin-straight hair. But it shifted the default for *unspecified*
+hair toward curly, and dragged the whole visual style of its training set along with it:
+plainer backgrounds, more ordinary faces, deeper complexions, neutral expressions, applied
+regardless of prompt. Enabling that by default would tax every generation to fix one
+attribute, so the caller chooses.
 
 The cause is the dataset. Every one of the 200 captions used the same template, from a single
 generator, with no contrast examples — nothing straight, tight, coily or glamorous. The adapter
 had no way to learn that curl geometry is separable from everything else in frame.
 
 The step-500 checkpoint is the best of the three; step 1500 is visibly overtrained.
+
+**Outstanding.** The checkpoint currently served is step 1500 — the overtrained one — not
+step 500. The deployed file's own `training_info` metadata reads `{"step": 1500, "epoch": 2}`.
+This is a packaging mistake, not a considered choice: the final checkpoint was saved under the
+plain `beenga_curl_v1.safetensors` name and that is the name the predictor loads. Correcting it
+means rebuilding and repushing the image, so it is recorded here rather than quietly fixed.
 
 ## Training data provenance
 
@@ -88,7 +101,7 @@ human judging images — subjective, not reproducible, and a real limitation of 
 | Generic Indian prompts default to traditional/ceremonial | prompt layer |
 | "Clean-shaven" renders stubble | prompt layer — five stacked positive restatements, 6/6 |
 | Requested deep complexions render lighter | prompt layer, per-tone stacks; luma monotonic across 7 tones over 42 images |
-| Soft/salon curls collapse under attribute load | LoRA — trained, not released |
+| Soft/salon curls collapse under attribute load | LoRA — served opt-in, partially fixed |
 
 ## Known limitations
 
