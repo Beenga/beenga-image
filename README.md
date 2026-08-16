@@ -11,14 +11,21 @@ prompt, you get an image that matches it. No prompt engineering, no wrestling wi
 stacking the same instruction five times to make it stick.
 
 ```js
-const res = await fetch("https://api.beenga.com/v1/image", {
+const res = await fetch("https://api.replicate.com/v1/predictions", {
   method: "POST",
-  headers: { Authorization: `Bearer ${BEENGA_KEY}`, "Content-Type": "application/json" },
+  headers: {
+    Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+    "Content-Type": "application/json",
+    Prefer: "wait",
+  },
   body: JSON.stringify({
-    prompt: "A clean-shaven young Indian man on a rooftop in Delhi, no moustache, no beard",
+    version: "beenga/beenga-image-1",
+    input: {
+      prompt: "A clean-shaven young Indian man on a rooftop in Delhi, no moustache, no beard",
+    },
   }),
 });
-const { image } = await res.json();
+const { output } = await res.json();
 ```
 
 That prompt fails on every general-purpose model — you get stubble and a weathered terrace.
