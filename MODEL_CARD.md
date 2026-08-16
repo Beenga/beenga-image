@@ -129,6 +129,29 @@ concept in the prompt, and never raising it at all may do better. Worth a proper
 
 Scoring here is by eye, with the same limitations as every other axis except complexion.
 
+## Regional variation — measured, unfixed 2026-08-16
+
+`delhi man in 20s`, `kerala man in 20s` and `andhra man in 20s` all return the same face.
+Four things were tried and measured:
+
+| Attempt | Result |
+|---|---|
+| Raw prompts, layer **off** — Kerala / Punjab / Tamil / Bengali | One face, one bone structure. **Klein does not encode Indian regional variation.** |
+| Stating "South Indian appearance" instead of suppressing "North Indian" | No perceptible change |
+| Sampling complexion and hair per prompt, inside the house look | Marginal — four regions still read as one man with different skin tone |
+| Relaxing the house look's beauty descriptors | No change — the house look is **not** the homogeniser |
+
+The cause appears to be **prompt dilution**, the first known problem below. The same
+complexion-and-hair attributes appended to a ~12-word prompt produce four visibly different
+people; appended to the layer's ~120-word output they produce one. The attributes are not
+weak, they are outnumbered.
+
+So the fix is not another rule. It is the length budget — terse defaults, full strength only
+for what the user asked for. The face-variety rule was written, measured, and reverted rather
+than shipped, because it lengthened the prompt without moving the result.
+
+Regional facial diversity beyond this is a fine-tune target, not a prompt target.
+
 ## Known limitations
 
 - Manual scoring on every axis except complexion.
