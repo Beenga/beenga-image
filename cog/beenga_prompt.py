@@ -45,9 +45,30 @@ NEGATIONS = [
 ]
 
 # --- 2. contemporary default ------------------------------------------------
+# Cities AND states. The first version listed only cities, so "kerala man in
+# 20s" or "punjab man in 20s" did not register as India at all and silently got
+# no contemporary default — the headline feature, skipped, for any prompt that
+# named a state instead of a city. INDIAN_PLACE below already listed those
+# states, so the layer knew Kerala was Indian when suppressing the North Indian
+# look but not when applying contemporary defaults. Two lists that must agree
+# and did not; scripts/check-place-lists.mjs now asserts INDIAN_PLACE subset of
+# INDIA.
+#
+# Same failure shape as `clean shave` vs `clean-shaven`: the benchmark cases
+# were written with city names, so the state-name path was never exercised.
 INDIA = re.compile(
-    r"\b(indian?|delhi|mumbai|bombay|bengaluru|bangalore|chennai|kolkata|"
-    r"hyderabad|pune|jaipur|ahmedabad|kochi|lucknow)\b", re.I)
+    r"\b(indian?|desi|delhi|new\s+delhi|noida|gurgaon|gurugram|punjab|punjabi|"
+    r"haryana|rajasthan|jaipur|udaipur|jodhpur|lucknow|kanpur|varanasi|banaras|"
+    r"agra|uttar\s+pradesh|bihar|patna|jharkhand|chandigarh|amritsar|ludhiana|"
+    r"dehradun|uttarakhand|himachal|shimla|kashmir|srinagar|jammu|"
+    r"madhya\s+pradesh|indore|bhopal|chhattisgarh|raipur|mumbai|bombay|"
+    r"bengaluru|bangalore|chennai|madras|kolkata|calcutta|hyderabad|pune|"
+    r"ahmedabad|surat|kochi|cochin|trivandrum|kerala|tamil|telugu|kannada|"
+    r"malayalam|mysore|coimbatore|madurai|vizag|visakhapatnam|bengali|bangla|"
+    r"assam|odisha|orissa|bhubaneswar|goa|konkan|marathi|nagpur|gujarat|"
+    r"gujarati|manipur|naga|mizo|khasi|sikkim|north\s*east|northeast|"
+    r"south\s+india|south\s+indian|east\s+india|west\s+india|andhra|karnataka|"
+    r"maharashtra)\b", re.I)
 
 TRADITIONAL_INTENT = re.compile(
     r"\b(traditional|classical|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
