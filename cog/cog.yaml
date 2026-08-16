@@ -10,10 +10,16 @@
 # connection and means a rebuild does not re-upload 15GB of checkpoint.
 build:
   gpu: true
-  cuda: "12.8"
+  # 12.4, NOT 12.8. cog maps 12.8 to nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04,
+  # and Ubuntu 24.04 enforces PEP 668 — the system Python is marked externally
+  # managed. That single fact broke two separate builds in different places:
+  # cog 0.21 died at build time on `uv run pip install`, and cog 0.22 built fine
+  # but Replicate's runtime dependency step was refused at container setup.
+  # CUDA 12.4 maps to an Ubuntu 22.04 base, which does not enforce it.
+  cuda: "12.4"
   python_version: "3.11"
   python_packages:
-    - "torch==2.11.0"
+    - "torch==2.6.0"
     - "torchvision"
     - "torchaudio"
     - "diffusers>=0.36"
@@ -25,20 +31,13 @@ build:
     - "peft"
     - "pillow"
   run:
-    # Bake the checkpoint into the image. The first build left it to download at
-    # boot to keep the push small — and the very first prediction then sat in
-    # `starting` for over twenty minutes pulling ~15GB. Replicate scales public
-    # models to zero, so that cost would be paid on every cold start, by users.
-    # A one-off larger push is the right trade.
+    # Weights are NOT baked in. They were, briefly: the first prediction sat in
+    # `starting` for twenty minutes and I read that as a slow boot download. It
+    # was not — setup was crashing on PEP 668, fixed by the CUDA 12.4 base above.
+    # Baking 15GB in produced a ~70GB image that then failed to unpack on a
+    # 155GB builder, so the change solved nothing and broke the build.
+    # Weights download once per machine and Replicate caches them.
     - "mkdir -p /src/model-cache /src/loras"
-    - "pip install --no-cache-dir huggingface_hub"
-    - "python3 -c \"from huggingface_hub import snapshot_download; snapshot_download('black-forest-labs/FLUX.2-klein-4B', cache_dir='/src/model-cache')\""
-    # Cog's base setup symlinks `python3` but not `python`, then its own
-    # post-build step runs `python -m pip freeze` and dies with
-    # "exec python failed: No such file or directory" — after the image has
-    # already built and exported successfully, which makes it look like a build
-    # failure when it is a packaging-step failure.
-    - "ln -sf $(command -v python3) /usr/local/bin/python"
 
 predict: "predict.py:Predictor"
 

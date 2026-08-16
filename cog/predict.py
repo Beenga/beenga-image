@@ -29,7 +29,17 @@ class Predictor(BasePredictor):
         self.pipe = Flux2KleinPipeline.from_pretrained(
             MODEL, torch_dtype=torch.bfloat16, cache_dir=CACHE
         )
-        self.pipe.to("cuda")
+        # NOT .to("cuda"). Klein 4B plus its VLM text encoder does not fit in the
+        # 16GB card Replicate assigns by default — setup died with
+        # "CUDA out of memory ... total capacity of 14.56 GiB" before a single
+        # prediction ran, and the model page reports that only as "failed to
+        # complete setup".
+        #
+        # Offloading keeps components on CPU and moves each to GPU only while it
+        # is needed. Slower per call than resident weights, but it fits, and it
+        # keeps the model runnable on whatever hardware it lands on rather than
+        # depending on a large-GPU assignment.
+        self.pipe.enable_model_cpu_offload()
         self.pipe.set_progress_bar_config(disable=True)
         self.lora_loaded = False
 
