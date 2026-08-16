@@ -102,6 +102,18 @@ LIGHTING = re.compile(r"\b(light|lighting|lit|sunset|sunrise|golden\s+hour|night
                       r"cloudy|moody|dark|silhouette)\w*\b", re.I)
 DAYLIGHT = "Bright natural daylight, clear colour."
 
+
+# Beenga is India-first: a prompt naming a person but not who they are should
+# produce an Indian subject. Only while nothing contradicts it.
+FOREIGN = re.compile(
+    r"\b(paris|london|new\s+york|tokyo|beijing|shanghai|dubai|sydney|moscow|berlin|"
+    r"rome|madrid|bangkok|singapore|seoul|cairo|lagos|nairobi|toronto|chicago|"
+    r"los\s+angeles|san\s+francisco|europe|european|america|american|african|chinese|"
+    r"japanese|korean|thai|arab|arabic|latina?|hispanic|russian|british|french|german|"
+    r"italian|spanish|mexican|brazilian|nigerian|kenyan|caucasian|white|"
+    r"black\s+(man|woman|person)|scandinavian|nordic)\b", re.I)
+STATED_INDIAN = re.compile(r"\bindian\b|\bsouth\s+asian\b|\bdesi\b", re.I)
+
 SARI = re.compile(r"\b(sari|saree)\b", re.I)
 FABRIC_OR_COLOUR = re.compile(
     r"\b(silk|cotton|chiffon|georgette|linen|handloom|khadi|organza|banarasi|"
@@ -169,11 +181,8 @@ FRAGILE = [
     # places the scene but says nothing about the person, and Klein does not
     # infer it. Only when a person is present, India is implied by place rather
     # than stated, and no other ethnicity is named.
-    (lambda raw: bool(PERSON.search(raw)) and bool(INDIA.search(raw))
-                 and not re.search(r"\bindian\b|\bsouth\s+asian\b|\bdesi\b", raw, re.I)
-                 and not re.search(r"\b(european|caucasian|white|african|black|chinese|"
-                                   r"japanese|korean|thai|arab|latina?|hispanic|russian|"
-                                   r"american|british)\b", raw, re.I),
+    (lambda raw: bool(PERSON.search(raw)) and not STATED_INDIAN.search(raw)
+                 and not FOREIGN.search(raw),
      "The person is Indian, with South Asian features and colouring."),
     # "beautiful delhi girl in sari" rendered a woman around thirty, on the raw
     # model as well as through this layer — Klein maps youth words to roughly 30
