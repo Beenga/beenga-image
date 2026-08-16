@@ -142,11 +142,57 @@ SARI_LOOKS = [
 
 
 def _pick_look(s):
+    return SARI_LOOKS[_hash(s) % len(SARI_LOOKS)]
+
+
+
+# --- deity iconography ------------------------------------------------------
+# "Lord Hanuman lifting a mountain" produced a crowned human figure on both Klein
+# and Z-Image — neither renders the vanara face that defines him. Deities have
+# fixed iconography and the models only half-know it.
+DEITY_ICONS = [
+    (re.compile(r"\bhanuman\b", re.I),
+     "Hanuman has the face of a vanara monkey, orange-red fur, a golden crown and mace, and a long tail."),
+    (re.compile(r"\bganesh|ganpati\b", re.I),
+     "Ganesha has an elephant head with one broken tusk, a large belly, and four arms."),
+    (re.compile(r"\bshiva\b", re.I),
+     "Shiva has a blue throat, matted jata hair with a crescent moon, a third eye, and a trident."),
+    (re.compile(r"\bkrishna\b", re.I),
+     "Krishna has blue skin, a peacock feather in his hair, and a bamboo flute."),
+    (re.compile(r"\bdurga\b", re.I), "Durga has many arms holding weapons and rides a lion."),
+    (re.compile(r"\bsaraswati\b", re.I), "Saraswati wears white, holds a veena, and sits with a swan."),
+    (re.compile(r"\blakshmi|laxmi\b", re.I), "Lakshmi sits on a lotus with gold coins flowing from her palms."),
+]
+
+# --- scene variety ----------------------------------------------------------
+# The contemporary default said only "modern clean surroundings", so Klein reached
+# for the same apartment walkway every time. Deterministic pick from prompt+seed.
+SETTING_NAMED = re.compile(VENUE.pattern + r"|\b(market|bazaar|temple|gym|shop|beach|hill|"
+                           r"mountain|village|farm|airport|hospital|library|museum|stadium|"
+                           r"terrace)\w*\b", re.I)
+SCENES = [
+    "a busy neighbourhood street with shopfronts and parked scooters",
+    "a leafy residential lane with low boundary walls",
+    "a modern apartment balcony overlooking the city",
+    "a tidy indoor room with plain painted walls",
+    "a college campus courtyard",
+    "a small local cafe interior",
+    "a metro station platform",
+    "a rooftop terrace at the top of an apartment block",
+]
+
+# --- focus ------------------------------------------------------------------
+# Klein blurs portrait backgrounds heavily by default, which reads as washed out.
+DOF = re.compile(r"\b(depth\s+of\s+field|bokeh|blurred?\s+background|shallow\s+focus|"
+                 r"f/1|f1\.|portrait\s+lens|cinematic)\b", re.I)
+DEEP_FOCUS = "Background in clear focus with visible detail."
+
+
+def _hash(s):
     h = 0
     for ch in s:
         h = (h * 31 + ord(ch)) & 0xFFFFFFFF
-    return SARI_LOOKS[h % len(SARI_LOOKS)]
-
+    return h
 
 # --- house look -------------------------------------------------------------
 # Beenga's commercial default: North Indian, fair, sharp-featured, and for men
@@ -290,6 +336,20 @@ def enhance(raw, contemporary=True, reinforce=True, variant=""):
     if not LIGHTING.search(raw):
         tail.append(DAYLIGHT)
         applied.append("daylight-default")
+
+    for pat, icon in DEITY_ICONS:
+        if pat.search(raw):
+            tail.append(icon)
+            applied.append("deity-icon")
+            break
+
+    if PERSON.search(raw) and not SETTING_NAMED.search(raw):
+        tail.append(f"The setting is {SCENES[_hash(raw + variant) % len(SCENES)]}.")
+        applied.append("scene-variety")
+
+    if not DOF.search(raw):
+        tail.append(DEEP_FOCUS)
+        applied.append("deep-focus")
 
     if reinforce:
         recap = []
