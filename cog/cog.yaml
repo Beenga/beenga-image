@@ -31,13 +31,19 @@ build:
     - "peft"
     - "pillow"
   run:
-    # Weights are NOT baked in. They were, briefly: the first prediction sat in
-    # `starting` for twenty minutes and I read that as a slow boot download. It
-    # was not — setup was crashing on PEP 668, fixed by the CUDA 12.4 base above.
-    # Baking 15GB in produced a ~70GB image that then failed to unpack on a
-    # 155GB builder, so the change solved nothing and broke the build.
-    # Weights download once per machine and Replicate caches them.
+    # Weights ARE baked in, pushed via --separate-weights so they land in their
+    # own cached layer rather than bloating the code layers.
+    #
+    # Downloading 15GB at every cold boot is fragile, and it failed in practice:
+    # "RemoteProtocolError: peer closed connection without sending complete
+    # message body" partway through. Baking them in removes the network from the
+    # boot path entirely.
+    #
+    # An earlier attempt at this produced a ~70GB image that could not unpack on
+    # a 155GB builder. The fix is a bigger builder and --separate-weights, not
+    # abandoning the approach.
     - "mkdir -p /src/model-cache /src/loras"
+    - "python3 -c \"from huggingface_hub import snapshot_download; snapshot_download('black-forest-labs/FLUX.2-klein-4B', cache_dir='/src/model-cache')\""
 
 predict: "predict.py:Predictor"
 

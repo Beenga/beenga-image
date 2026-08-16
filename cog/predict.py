@@ -9,6 +9,19 @@ the base checkpoint is what fine-tuning targets. Callers get the fast one.
 """
 
 import os
+
+# Before diffusers/transformers import, or the flags are read too late.
+#
+# Setup kept dying with "RemoteProtocolError: peer closed connection without
+# sending complete message body (received 0 bytes, expected 5536)" even after the
+# checkpoint was baked into the image. 5536 bytes is a metadata file, not
+# weights: from_pretrained still calls the Hub to resolve refs and check for
+# updates, and that call was failing on Replicate's workers. The cached weights
+# were never the problem — the liveness check was.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+
 import time
 from typing import List, Optional
 
@@ -26,8 +39,11 @@ class Predictor(BasePredictor):
     def setup(self):
         from diffusers import Flux2KleinPipeline
 
+        # local_files_only as well as the env flags: belt and braces, since a
+        # single Hub round-trip at setup is enough to fail the whole worker.
         self.pipe = Flux2KleinPipeline.from_pretrained(
-            MODEL, torch_dtype=torch.bfloat16, cache_dir=CACHE
+            MODEL, torch_dtype=torch.bfloat16, cache_dir=CACHE,
+            local_files_only=True,
         )
         # Size the loading strategy to whatever card we land on.
         #
