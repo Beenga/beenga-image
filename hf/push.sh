@@ -9,7 +9,9 @@
 # hf/beenga-curl-v1/README.md.
 set -euo pipefail
 
-REPO="${HF_REPO:-beenga/beenga-curl-v1}"
+# Model repo, not a Space. Spaces host demo apps; weights live in a model repo,
+# and `huggingface-cli upload --repo-type=model` creates it if it does not exist.
+REPO="${HF_REPO:-beenga8/beenga-curl-v1}"
 SRC="out/lora/beenga_curl_v1/beenga_curl_v1_000000500.safetensors"
 EXPECTED_SHA="bea8e082a3ed30dd63d37a217a726a9e2f60422cfba2e8de4c453a601ecef6b4"
 STAGE="hf/beenga-curl-v1"

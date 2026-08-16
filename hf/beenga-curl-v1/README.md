@@ -40,7 +40,7 @@ pipe = Flux2KleinPipeline.from_pretrained(
 ).to("cuda")
 
 pipe.load_lora_weights(
-    "beenga/beenga-curl-v1",
+    "beenga8/beenga-curl-v1",
     weight_name="beenga_curl_v1.safetensors",
     adapter_name="curl",
 )
