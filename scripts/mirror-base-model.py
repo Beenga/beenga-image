@@ -46,6 +46,8 @@ SRC = "black-forest-labs/FLUX.2-klein-4B"
 REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
 DST = os.environ.get("HF_MIRROR_REPO", "beenga8/flux2-klein-4b-mirror")
 PRIVATE = os.environ.get("HF_MIRROR_PRIVATE", "0") == "1"
+# Fixed, self-cleaning scratch dir — see the pull loop for why.
+SCRATCH = os.environ.get("HF_MIRROR_SCRATCH", "out/.mirror-scratch")
 
 try:
     from huggingface_hub import (HfApi, hf_hub_download, list_repo_files,
@@ -135,6 +137,7 @@ def main():
         print("\ndry run — pass --go to transfer")
         return
 
+    shutil.rmtree(SCRATCH, ignore_errors=True)   # clear anything a prior crash left
     api.create_repo(DST, repo_type="model", private=PRIVATE, exist_ok=True, token=token)
     _write_card(api, token)
     existing = set(list_repo_files(DST, token=token))
@@ -146,12 +149,19 @@ def main():
             done += 1
             continue
         print(f"  pull   {f}  ({sizes[f] / 1e9:.2f} GB)", flush=True)
-        with tempfile.TemporaryDirectory() as tmp:
-            local = hf_hub_download(SRC, f, revision=REVISION, local_dir=tmp, token=token)
+        # A fixed scratch dir, wiped at the start of every run, rather than
+        # tempfile.TemporaryDirectory. Two earlier attempts were killed mid-push
+        # and each stranded a full 7.75GB download in /var/folders that nothing
+        # ever cleaned — together they took the machine to 100% disk. A crash
+        # here now costs one file, and the next run clears it.
+        try:
+            local = hf_hub_download(SRC, f, revision=REVISION, local_dir=SCRATCH, token=token)
             print(f"  push   {f}", flush=True)
             api.upload_file(path_or_fileobj=local, path_in_repo=f, repo_id=DST,
                             repo_type="model", token=token,
                             commit_message=f"Mirror {f} from {SRC}@{REVISION[:12]}")
+        finally:
+            shutil.rmtree(SCRATCH, ignore_errors=True)
         done += 1
         print(f"  ok     {done}/{len(files)}")
 

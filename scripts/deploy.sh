@@ -150,6 +150,23 @@ echo "  streaming; ^C is safe, the build keeps running"
 ssh -o BatchMode=yes -o ServerAliveInterval=30 "root@$IP" \
   'while pgrep -f "cog push" >/dev/null; do sleep 30; done; tail -20 /root/push.log'
 
+# ── optional: mirror the base model from the droplet ─────────────────────────
+# Two attempts from the laptop failed. The 7.75GB downloads succeeded and the
+# UPLOADS stalled — pushing that much LFS over a home connection is the fragile
+# part, and each killed attempt stranded a full 7.75GB in /var/folders until the
+# machine hit 100% disk. The droplet has 320GB and a datacenter uplink in both
+# directions, and it is already up. This is where the mirror should have run.
+if [[ "${MIRROR:-0}" == "1" ]]; then
+  say "mirroring base model to Hugging Face"
+  [[ -n "${HF_TOKEN:-}" ]] || die "MIRROR=1 needs HF_TOKEN in .env"
+  scp -o BatchMode=yes scripts/mirror-base-model.py "root@$IP:/root/"
+  ssh -o BatchMode=yes "root@$IP" "
+    pip install -q 'huggingface_hub[cli]' 2>/dev/null || pip3 install -q 'huggingface_hub[cli]'
+    cd /root && HF_TOKEN='$HF_TOKEN' HF_MIRROR_SCRATCH=/root/mirror-scratch \
+      python3 mirror-base-model.py --go
+  " || die "mirror failed — the script names which files are missing"
+fi
+
 say "done"
 echo "Verify the new version, then TEST IT before destroying:"
 echo "  curl -s -H \"Authorization: Bearer \$REPLICATE_API_TOKEN\" \\"
