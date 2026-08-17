@@ -71,7 +71,7 @@ INDIA = re.compile(
     r"maharashtra)\b", re.I)
 
 TRADITIONAL_INTENT = re.compile(
-    r"\b(traditional|classical|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
+    r"\b(traditional|classical|lehenga|sherwani|ghagra|ghaghra|achkan|jodhpuri|mundu|veshti|dhoti|angavastram|pattu|langa|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
     r"garba|temple|ritual|ceremon|wedding|bridal|festival|puja|pooja|diwali|"
     r"navratri|historical|period|ancient|mytholog|village|rural|folk|hanuman|krishna|krishn|radha|\brama\b|\bram\b|shiva|shiv\b|vishnu|ganesh|ganpati|lakshmi|laxmi|durga|kali\b|saraswati|brahma|parvati|murugan|ayyappa|venkatesw|balaji|jagannath|nataraj|buddha|mahavir|nanak|sai baba|deity|goddess|\bgod\b|\blord\b|avatar|ramayana|mahabharata|bhagavad|bhakti|devotional|aarti|mandir|idol|murti|shrine|pilgrim|sadhu|saint|yogi|ascetic|epic\b|scripture|vedic|sanskrit)\w*\b", re.I)
 
@@ -104,9 +104,25 @@ DANCE_VENUE = "An ordinary domestic living room."
 # baby hairs, and real scalp detail. Skipped for non-photographic styles.
 NON_PHOTO = re.compile(r"\b(cartoon|anime|illustration|illustrated|painting|painted|"
                        r"sketch|drawing|3d\s+render|cgi|pixar|vector|comic)\b", re.I)
-PERSON_WORD = re.compile(r"\b(woman|women|man|men|girl|boy|lady|ladies|person|people|"
-                         r"couple|friends?|family|group|crowd|child|children|kid|student|"
-                         r"model|portrait|face|hair|male|female|guy|gentleman|bride|groom)\b", re.I)
+# Occupations, kinship and age words as well as the bare nouns. "an indian
+# farmer", "an indian shopkeeper", "an indian teenager", "an indian uncle" and
+# "an elderly indian" were ALL invisible to the layer — no house look, no hair
+# realism, no scene variety, no clothing default. HANDOFF names "farmer" as a
+# worked example of overriding the attractive default, and it never worked.
+PERSON_WORD = re.compile(
+    r"\b(woman|women|man|men|girl|boy|lady|ladies|person|people|couple|friends?|"
+    r"family|group|crowd|child|children|kid|student|model|portrait|face|hair|male|"
+    r"female|guy|gentleman|bride|groom|"
+    r"teen|teens|teenager|teenagers|adult|adults|elder|elderly|senior|seniors|"
+    r"youth|toddler|infant|baby|grandmother|grandfather|granny|"
+    r"mother|father|sister|brother|daughter|son|aunt|aunty|auntie|uncle|cousin|"
+    r"wife|husband|bhai|didi|bhabhi|beta|beti|amma|appa|maa|papa|dada|dadi|nani|nana|"
+    r"farmer|shopkeeper|vendor|hawker|driver|teacher|doctor|nurse|engineer|"
+    r"entrepreneur|founder|professional|worker|labourer|tailor|barber|"
+    r"chef|cook|waiter|guard|officer|policeman|soldier|priest|artist|musician|"
+    r"dancer|singer|player|athlete|actor|actress|influencer|blogger|"
+    r"customer|passenger|commuter|shopper|pedestrian|villager|"
+    r"someone|somebody|individual|figure|subject|character|human)\b", re.I)
 
 # A prompt can say there is nobody in the picture, and until 2026-08-16 this layer
 # could not hear it: PERSON matched the word "people" INSIDE "no people in frame",
@@ -459,7 +475,9 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
             add("modern-dress-default", MODERN_DRESS)
             applied.append("modern-dress-default")
 
-    if DANCE.search(raw) and not VENUE.search(raw):
+    # SETTING_NAMED, not VENUE. VENUE is the narrow original list, so "dancing
+    # at a mela" got "An ordinary domestic living room" over the named setting.
+    if DANCE.search(raw) and not SETTING_NAMED.search(raw):
         add("dance-venue-default", DANCE_VENUE)
         applied.append("dance-venue-default")
 
