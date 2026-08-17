@@ -1,9 +1,9 @@
 # Model Card — Beenga Image
 
-**Status: deployed. The adapter is served, not distributed.** Beenga Image runs in production
-on Replicate. The prompt layer is the product; the curl LoRA ships inside the served image
-behind an opt-in flag, and is not published as a downloadable checkpoint. This card documents
-what exists and what was measured.
+**Status: deployed, adapter published.** Beenga Image runs in production on Replicate. The
+prompt layer is the product; the curl LoRA ships inside the served image behind an opt-in flag
+and is also published at [`beenga8/beenga-curl-v1`](https://huggingface.co/beenga8/beenga-curl-v1). This card documents what exists
+and what was measured.
 
 ## What Beenga Image is
 
@@ -27,6 +27,8 @@ image
 | | |
 |---|---|
 | Model | `black-forest-labs/FLUX.2-klein-4B` (distilled, for inference) |
+| Revision | `e7b7dc27f91deacad38e78976d1f2b499d76a294` — pinned in `cog.yaml` AND `predict.py` |
+| Mirror | [`beenga8/flux2-klein-4b-mirror`](https://huggingface.co/beenga8/flux2-klein-4b-mirror) — byte-for-byte copy of that revision |
 | Fine-tuning base | `black-forest-labs/FLUX.2-klein-base-4B` (undistilled) |
 | Licence | Apache 2.0 — commercial use permitted |
 | Provider | Black Forest Labs |
@@ -40,8 +42,8 @@ exact terms and the quantised variants.
 |---|---|
 | Name | `beenga_curl_v1` |
 | Status | **served opt-in** as `curl_enhance`, default off — did not meet the bar to be a default |
-| Distribution | not published as a downloadable checkpoint |
-| Served checkpoint | step 1500 — see *Outstanding* below, the step-500 checkpoint scored better |
+| Published | [`beenga8/beenga-curl-v1`](https://huggingface.co/beenga8/beenga-curl-v1) — **step 500**, Apache 2.0 |
+| Served checkpoint | **step 500** as of 2026-08-17 — corrected, see *Outstanding* below |
 | Method | LoRA, rank 32, alpha 32 |
 | Steps | 1500 (checkpoints at 500 / 1000 / 1500) |
 | Optimiser | adamw8bit, lr 1e-4, flowmatch scheduler, bf16, quantised |
@@ -63,11 +65,13 @@ had no way to learn that curl geometry is separable from everything else in fram
 
 The step-500 checkpoint is the best of the three; step 1500 is visibly overtrained.
 
-**Outstanding.** The checkpoint currently served is step 1500 — the overtrained one — not
-step 500. The deployed file's own `training_info` metadata reads `{"step": 1500, "epoch": 2}`.
-This is a packaging mistake, not a considered choice: the final checkpoint was saved under the
-plain `beenga_curl_v1.safetensors` name and that is the name the predictor loads. Correcting it
-means rebuilding and repushing the image, so it is recorded here rather than quietly fixed.
+**Resolved 2026-08-17.** Production served step 1500 — the overtrained one — until this date.
+The final checkpoint had been saved under the plain `beenga_curl_v1.safetensors` name and that
+is the name the predictor loads, so the wrong file shipped without anyone choosing it. Three
+checkpoints share a byte size and differ only in content, which is why it went unnoticed.
+
+`scripts/deploy.sh` now refuses to build unless both the SHA-256 and the file's own
+`training_info` metadata agree the adapter is step 500.
 
 ## Training data provenance
 

@@ -69,7 +69,7 @@ A LoRA trained to sharpen salon-curl geometry. It is off by default and should s
 
 It works — asked for pin-straight hair it still renders pin-straight hair — but it leaks. It shifts the default for *unspecified* hair toward curly, and drags the flatter look of its training set into unrelated scenes: plainer backgrounds, more ordinary faces, neutral expressions. Enabling it by default would tax every generation to fix one attribute.
 
-The adapter was trained on 200 images, 100% synthetic, no real photographs and no scraped data. The checkpoint currently served is step 1500; step 500 measured better and is the intended replacement. See the [model card](https://github.com/Beenga/beenga-image/blob/main/MODEL_CARD.md).
+The adapter was trained on 200 images, 100% synthetic, no real photographs and no scraped data. It is published at [`beenga8/beenga-curl-v1`](https://huggingface.co/beenga8/beenga-curl-v1) — step 500, the best of three checkpoints. See the [model card](https://github.com/Beenga/beenga-image/blob/main/MODEL_CARD.md).
 
 ---
 

@@ -154,7 +154,10 @@ the system, so the claims above can be checked rather than taken on trust.
 ## Licence & attribution
 
 **Beenga Image** is built on [**FLUX.2 [klein] 4B**](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)
-by Black Forest Labs.
+by Black Forest Labs, pinned to revision `e7b7dc27` and mirrored at
+[`beenga8/flux2-klein-4b-mirror`](https://huggingface.co/beenga8/flux2-klein-4b-mirror) so builds stay reproducible.
+
+The curl adapter is published at [`beenga8/beenga-curl-v1`](https://huggingface.co/beenga8/beenga-curl-v1).
 
 FLUX.2 [klein] 4B is released under the **Apache License 2.0**, which permits commercial use,
 modification and distribution subject to the terms of the licence. Beenga Image is also released
