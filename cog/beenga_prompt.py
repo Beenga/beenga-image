@@ -97,6 +97,29 @@ VENUE = re.compile(
 DANCE_VENUE = "An ordinary domestic living room."
 
 
+
+# --- cartoon style default ---------------------------------------------------
+# "cartoon" left to itself lands on flat 2D illustration, which is not what
+# people mean by it now — the modern default reading is a 3D animated feature.
+# State 3D unless the caller has chosen a style themselves.
+#
+# Stated positively and without naming what we do not want: writing "not flat 2D"
+# would contribute "flat" and "2D" as tokens and argue for the failure.
+CARTOON = re.compile(r"\b(cartoon|cartoons|cartoonish|toon|animated|animation)\b", re.I)
+
+# Any of these means the caller chose their own style, including a 3D one they
+# already described — restating it would only spend budget.
+STYLE_STATED = re.compile(
+    r"\b(2d|two[-\s]?dimensional|flat|hand[-\s]?drawn|line[-\s]?art|lineart|"
+    r"sketch|sketched|doodle|anime|manga|comic|cel[-\s]?shaded|cel|vector|"
+    r"watercolou?r|gouache|ink|woodcut|linocut|storybook|picture[-\s]?book|"
+    r"paper[-\s]?cut|collage|pixel[-\s]?art|8[-\s]?bit|sticker|clip[-\s]?art|"
+    r"3d|three[-\s]?dimensional|cgi|render|rendered|pixar|claymation|"
+    r"stop[-\s]?motion|low[-\s]?poly|voxel)\b", re.I)
+
+CARTOON_3D = ("Modern 3D animated film style, rounded volumetric forms, soft global "
+              "illumination, subtle subsurface scattering in the skin.")
+
 # --- 2c. hair realism -------------------------------------------------------
 # Klein renders hair as a solid moulded mass with a hard, high hairline — one of
 # the strongest tells that an image is generated. Naming the fine detail pushes
@@ -477,6 +500,10 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
 
     # SETTING_NAMED, not VENUE. VENUE is the narrow original list, so "dancing
     # at a mela" got "An ordinary domestic living room" over the named setting.
+    if CARTOON.search(raw) and not STYLE_STATED.search(raw):
+        add("cartoon-3d", CARTOON_3D)
+        applied.append("cartoon-3d")
+
     if DANCE.search(raw) and not SETTING_NAMED.search(raw):
         add("dance-venue-default", DANCE_VENUE)
         applied.append("dance-venue-default")
@@ -638,6 +665,10 @@ RULE_BUDGET = {
     "scene-variety": {"tier": 2, "full": None, "terse": None, "dynamic": "SCENES"},
     "deity-icon": {"tier": 2, "full": None, "terse": None, "dynamic": "DEITY_ICONS"},
     "dance-venue-default": {"tier": 2, "full": DANCE_VENUE, "terse": None},
+    "cartoon-3d": {
+        "tier": 2, "full": CARTOON_3D,
+        "terse": "Modern 3D animated style, volumetric forms, soft lighting.",
+    },
 
     # Tier 1: what the user explicitly asked for. Never trimmed.
     "reinforce": {"tier": 1, "full": None, "terse": None, "dynamic": "FRAGILE"},

@@ -47,7 +47,10 @@ const MODIFIER = [
   { t: "", },
   { t: ", deep dark complexion", complexion: true },
   { t: ", ordinary everyday look", look: true },
-  { t: ", as a watercolour painting", nonPhoto: true },
+  { t: ", as a watercolour painting", nonPhoto: true, styleStated: true },
+  { t: ", as a cartoon", nonPhoto: true, cartoon: true },
+  { t: ", as a 2d cartoon", nonPhoto: true, cartoon: true, styleStated: true },
+  { t: ", as an anime", nonPhoto: true, cartoon: false, styleStated: true },
   { t: ", at night", lighting: true },
   { t: ", dancing", dance: true },
   { t: ", long thick braid", braid: true },
@@ -67,12 +70,14 @@ const INVARIANTS = {
   "deity-icon":           (f) => f.deity,
   "contemporary-default": (f) => !f.traditional,
   "daylight-default":     (f) => !f.lighting,
+  "cartoon-3d":           (f) => f.cartoon && !f.styleStated,
 };
 // Rules that SHOULD fire when the condition holds — catches silent no-ops.
 const EXPECTED = {
   "sari-variety":  (f) => f.sari && !f.traditional,
   "deity-icon":    (f) => f.deity,
   "hair-realism":  (f) => f.person && !f.nonPhoto,
+  "cartoon-3d":    (f) => f.cartoon && !f.styleStated,
 };
 
 const merge = (...os) => Object.assign({}, ...os);

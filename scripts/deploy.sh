@@ -97,8 +97,11 @@ console.log(JSON.stringify(c.map(x=>enhance(x.prompt).prompt)));}});"""],
     print(f"  parity     {name}: {len(cases)-len(bad)}/{len(cases)} {bad if bad else ''}")
 sys.exit(1 if bad_total else 0)
 EOF
+node scripts/audit-layer.mjs >/dev/null 2>&1 \
+  || die "layer audit failed — run: node scripts/audit-layer.mjs"
 node scripts/check-place-lists.mjs >/dev/null || die "place-list check failed"
 node scripts/check-rule-budget.mjs >/dev/null || die "rule-budget registries disagree"
+echo "  audit      every rule gate holds across the facet cross-product"
 echo "  checks     place lists and rule registries agree"
 
 # The safety gate is the reason this rebuild matters most. Assert it in the
