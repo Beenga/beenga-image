@@ -34,6 +34,16 @@ MODEL = "black-forest-labs/FLUX.2-klein-4B"
 CACHE = "/src/model-cache"
 CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 
+# Word budget for the prompt layer on the EDIT path. Tight on purpose: the
+# layer's scene defaults are written for generation and fight a source image.
+# Tier 1 — what the caller actually asked for — is never trimmed by the budget,
+# so this keeps the useful half and drops the scenery.
+# 0 means Tier 1 only — what the caller explicitly asked for, and nothing else.
+# Not a small budget: a small budget keeps whichever house defaults happen to be
+# cheap, and "Bright natural daylight" is five words that flatly contradict
+# "make it night". On an edit the scenery goes entirely.
+EDIT_BUDGET_WORDS = 0
+
 
 class Predictor(BasePredictor):
     def setup(self):
@@ -97,10 +107,18 @@ class Predictor(BasePredictor):
     def predict(
         self,
         prompt: str = Input(
-            description="What to generate. Write it plainly — Beenga handles the phrasing.",
+            description="What to generate, or what to change if you supply an image. "
+                        "Write it plainly — Beenga handles the phrasing.",
+        ),
+        image: Optional[Path] = Input(
+            description="Optional source image to edit. Leave blank to generate from "
+                        "scratch. With an image, the prompt is an instruction — "
+                        "'make it night', 'change the sari to green'.",
+            default=None,
         ),
         aspect_ratio: str = Input(
-            description="Output shape",
+            description="Output shape. Ignored when editing — the source image's "
+                        "dimensions are kept.",
             choices=["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
             default="1:1",
         ),
@@ -133,28 +151,60 @@ class Predictor(BasePredictor):
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "big")
 
+        editing = image is not None
+
         self._set_curl_lora(curl_enhance)
-        # seed as variant: re-rolling varies unspecified garment choice, while the
-        # same prompt+seed still reproduces byte-for-byte.
-        final, applied = (enhance(prompt, variant=str(seed))
-                          if beenga_prompt_layer else (prompt, []))
+
+        # The prompt layer is built for GENERATION prompts. Its defaults describe
+        # a whole scene — contemporary India, a setting, a house look, lighting —
+        # and on an edit those fight the source image instead of the model's
+        # priors. "make it night" does not want "Bright natural daylight" and a
+        # randomly chosen rooftop appended to it.
+        #
+        # So on the edit path the layer runs at a tight word budget, which keeps
+        # Tier 1 — the attributes the caller actually asked for, including the
+        # negation rewriting that is useful in any mode — and drops the scene
+        # defaults. Callers who want the full layer on an edit can still ask for
+        # it by turning beenga_prompt_layer on and accepting the result.
+        if beenga_prompt_layer:
+            # seed as variant: re-rolling varies unspecified garment choice, while
+            # the same prompt+seed still reproduces byte-for-byte.
+            final, applied = enhance(prompt, variant=str(seed),
+                                     budget=EDIT_BUDGET_WORDS if editing else False)
+        else:
+            final, applied = prompt, []
         if applied:
             print(f"beenga rules applied: {', '.join(applied)}")
 
-        w, h = _dims(aspect_ratio)
-        gen = torch.Generator("cuda").manual_seed(seed)
-        t0 = time.time()
-        image = self.pipe(
+        call = dict(
             prompt=final,
-            width=w, height=h,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
-            generator=gen,
-        ).images[0]
-        print(f"generated in {time.time() - t0:.2f}s  seed={seed}")
+            generator=torch.Generator("cuda").manual_seed(seed),
+        )
+
+        if editing:
+            from diffusers.utils import load_image
+            src = load_image(str(image))
+            # Keep the source's shape rather than the aspect_ratio input, so an
+            # edit returns something that lines up with what was sent in. Klein
+            # still needs multiples of 16 or it fails deep in the pipeline with a
+            # shape mismatch that does not name the real cause.
+            w, h = (max(16, (d // 16) * 16) for d in src.size)
+            if (w, h) != src.size:
+                src = src.resize((w, h))
+            call["image"] = src
+            print(f"editing {src.size[0]}x{src.size[1]}")
+        else:
+            w, h = _dims(aspect_ratio)
+        call["width"], call["height"] = w, h
+
+        t0 = time.time()
+        out_image = self.pipe(**call).images[0]
+        print(f"{'edited' if editing else 'generated'} in {time.time() - t0:.2f}s  seed={seed}")
 
         out = Path(f"/tmp/out.{output_format}")
-        image.save(str(out), quality=95) if output_format != "png" else image.save(str(out))
+        out_image.save(str(out), quality=95) if output_format != "png" else out_image.save(str(out))
         return [out]
 
 

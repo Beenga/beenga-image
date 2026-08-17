@@ -475,16 +475,37 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
             applied.append(f"reinforce:{len(recap)}")
 
     if tail:
-        if budget:
+        # `budget is False` means off. 0 is a VALID budget meaning "Tier 1 only":
+        # tier 1 is added unconditionally, then nothing else can fit. That is the
+        # edit path, where the scene defaults must go regardless of how cheap
+        # they are — a 5-word "Bright natural daylight" appended to "make it
+        # night" contradicts the instruction just as hard as a 26-word one.
+        if budget is False:
+            segs = [t["text"] for t in tail]
+        else:
             limit = BUDGET_WORDS if budget is True else budget
             segs = _spend_budget(tail, limit)
-        else:
-            segs = [t["text"] for t in tail]
         if segs:
             out = out.strip()
             if not out.endswith("."):
                 out += "."
             out = out + " " + " ".join(segs)
+
+        # `applied` must describe the prompt that was actually built, not the
+        # rules that were considered. It is the only visible record of what the
+        # layer did — printed in the prediction logs, and what deploys are
+        # verified against — so a rule the budget dropped must not appear.
+        if budget is not False:
+            kept = set(segs)
+            survived = set()
+            for t in tail:
+                terse = RULE_BUDGET.get(t["id"], {}).get("terse")
+                if t["text"] in kept or (t.get("keep") and t["keep"] in kept) \
+                        or (terse and terse in kept):
+                    survived.add(t["id"])
+            applied[:] = [a for a in applied
+                          if a.split(":")[0] not in RULE_BUDGET
+                          or a.split(":")[0] in survived]
 
     return out, applied
 
