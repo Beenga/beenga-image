@@ -30,10 +30,13 @@ from cog import BasePredictor, Input, Path
 
 from beenga_prompt import enhance
 
-MODEL = "black-forest-labs/FLUX.2-klein-4B"
+MODEL = "beenga8/flux2-klein-4b-mirror"           # our mirror — see cog.yaml
 CACHE = "/src/model-cache"
 
-# MUST match the revision= in cog.yaml, and must be passed to from_pretrained.
+# MUST match the repo AND revision= in cog.yaml, and be passed to from_pretrained.
+# The cache path is derived from the repo id, so if the build downloads from the
+# mirror and this still said black-forest-labs/..., the offline lookup would miss
+# and setup would fail exactly as it did for version 91361ddc.
 #
 # Pinning the download by commit SHA and NOT pinning the load is what disabled
 # version 91361ddc: "consistently fails to complete setup". snapshot_download
@@ -45,7 +48,7 @@ CACHE = "/src/model-cache"
 # The reproducibility fix broke the boot. Same shape as HF_HUB_OFFLINE breaking
 # the LoRA: each change correct alone, fatal together. If you bump one of these
 # two constants, bump both.
-REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
+REVISION = "dee36d946f5caa6644e03246f07f08288656a4c0"
 CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 
 # Word budget for the prompt layer on the EDIT path. Tight on purpose: the

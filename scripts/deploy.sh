@@ -57,8 +57,16 @@ assert step == 500, f"expected step 500, file says {step}"
 print(f"  adapter    step {step}, sha verified")
 EOF
 
-grep -q "revision='e7b7dc27f91deacad38e78976d1f2b499d76a294'" cog/cog.yaml \
-  || die "cog.yaml is not pinned to the benchmarked revision"
+# The build must download from OUR mirror, not from upstream. A mirror nothing
+# builds from protects nothing: if BFL withdraw or gate their repo, a rebuild
+# for any bug fix or fine-tune dies here while a full copy sits unused.
+grep -q "snapshot_download('beenga8/" cog/cog.yaml \
+  || die "cog.yaml downloads from upstream, not our mirror — a purge would block rebuilds"
+cogsrc=$(grep -o "snapshot_download('[^']*'" cog/cog.yaml | sed "s/.*('//;s/'//")
+predsrc=$(grep -o '^MODEL = "[^"]*"' cog/predict.py | sed 's/.*"\(.*\)"/\1/')
+[[ "$cogsrc" == "$predsrc" ]] \
+  || die "repo mismatch: cog.yaml=$cogsrc predict.py=$predsrc (cache path is derived from the repo id)"
+echo "  source     builds from $cogsrc"
 # Pinning the DOWNLOAD without pinning the LOAD is what disabled version
 # 91361ddc for "consistently fails to complete setup": snapshot_download with an
 # explicit revision writes snapshots/<sha> but no refs/main, and from_pretrained

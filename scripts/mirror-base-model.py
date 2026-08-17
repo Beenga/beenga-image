@@ -40,11 +40,19 @@ import shutil
 import sys
 import tempfile
 
-SRC = "black-forest-labs/FLUX.2-klein-4B"
+# Which upstream model to mirror. Defaults to the one production serves; the
+# fine-tuning base and the quantised variants are mirrored by setting HF_MIRROR_SRC.
+SRC = os.environ.get("HF_MIRROR_SRC", "black-forest-labs/FLUX.2-klein-4B")
 # Pinned to the revision every measurement in MODEL_CARD.md was made against.
-# Must match the revision= in cog/cog.yaml.
-REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
-DST = os.environ.get("HF_MIRROR_REPO", "beenga8/flux2-klein-4b-mirror")
+# Must match the revision= in cog/cog.yaml. Only meaningful for the default SRC —
+# the other repos are mirrored at their current head, since nothing is pinned to
+# them yet. HF_MIRROR_REVISION overrides; empty means "current head".
+REVISION = os.environ.get(
+    "HF_MIRROR_REVISION",
+    "e7b7dc27f91deacad38e78976d1f2b499d76a294"
+    if SRC == "black-forest-labs/FLUX.2-klein-4B" else "") or None
+DST = os.environ.get("HF_MIRROR_REPO",
+                     "beenga8/" + SRC.split("/")[-1].lower() + "-mirror")
 PRIVATE = os.environ.get("HF_MIRROR_PRIVATE", "0") == "1"
 # Fixed, self-cleaning scratch dir — see the pull loop for why.
 SCRATCH = os.environ.get("HF_MIRROR_SCRATCH", "out/.mirror-scratch")
@@ -124,7 +132,7 @@ def main():
             sizes[f] = 0
         total += sizes[f]
 
-    print(f"source   {SRC}@{REVISION[:12]}")
+    print(f"source   {SRC}@{(REVISION or 'head')[:12]}")
     print(f"target   {DST}  ({'private' if PRIVATE else 'public'})")
     print(f"files    {len(files)}   total {total / 1e9:.2f} GB")
     print(f"largest  {max(sizes.values()) / 1e9:.2f} GB  <- peak disk needed")
@@ -159,7 +167,7 @@ def main():
             print(f"  push   {f}", flush=True)
             api.upload_file(path_or_fileobj=local, path_in_repo=f, repo_id=DST,
                             repo_type="model", token=token,
-                            commit_message=f"Mirror {f} from {SRC}@{REVISION[:12]}")
+                            commit_message=f"Mirror {f} from {SRC}@{(REVISION or 'head')[:12]}")
         finally:
             shutil.rmtree(SCRATCH, ignore_errors=True)
         done += 1

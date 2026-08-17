@@ -52,12 +52,20 @@ build:
     # last modified 2026-02-24. Bump deliberately, then re-run the benchmarks —
     # every measurement in MODEL_CARD.md is against this revision.
     #
-    # Availability: these weights are Apache 2.0 and are baked into the pushed
-    # image, so a running model survives the upstream repo disappearing. A
-    # REBUILD would not. Keep a private mirror of this revision in object
-    # storage; a public mirror is redistribution of someone else's model under
-    # our name and is not worth the ambiguity.
-    - "python3 -c \"from huggingface_hub import snapshot_download; snapshot_download('black-forest-labs/FLUX.2-klein-4B', revision='e7b7dc27f91deacad38e78976d1f2b499d76a294', cache_dir='/src/model-cache')\""
+    # Downloads from OUR MIRROR, not from Black Forest Labs.
+    #
+    # That is the entire point of the mirror and it was missed at first: the
+    # weights are baked into the pushed image, so a RUNNING model survives BFL
+    # withdrawing, gating or renaming their repo — but a REBUILD would have
+    # failed here, because this line pointed upstream. A mirror nothing builds
+    # from protects nothing. Any bug fix or fine-tune needing a rebuild would
+    # have been blocked with a full copy of the weights sitting unused.
+    #
+    # beenga8/flux2-klein-4b-mirror is a byte-for-byte copy of
+    # black-forest-labs/FLUX.2-klein-4B@e7b7dc27, verified file-by-file against
+    # the source. Apache 2.0 permits the copy. Pinned to the mirror's own commit
+    # so a rebuild is reproducible against something we control end to end.
+    - "python3 -c \"from huggingface_hub import snapshot_download; snapshot_download('beenga8/flux2-klein-4b-mirror', revision='dee36d946f5caa6644e03246f07f08288656a4c0', cache_dir='/src/model-cache')\""
 
 predict: "predict.py:Predictor"
 
