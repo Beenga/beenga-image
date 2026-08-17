@@ -44,6 +44,9 @@ CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 # "make it night". On an edit the scenery goes entirely.
 EDIT_BUDGET_WORDS = 0
 
+# Matches the upstream Klein model's documented ceiling.
+MAX_REFERENCE_IMAGES = 5
+
 
 class Predictor(BasePredictor):
     def setup(self):
@@ -110,11 +113,12 @@ class Predictor(BasePredictor):
             description="What to generate, or what to change if you supply an image. "
                         "Write it plainly — Beenga handles the phrasing.",
         ),
-        image: Optional[Path] = Input(
-            description="Optional source image to edit. Leave blank to generate from "
-                        "scratch. With an image, the prompt is an instruction — "
-                        "'make it night', 'change the sari to green'.",
-            default=None,
+        images: List[Path] = Input(
+            description="Source images to edit or reference. Leave empty to generate "
+                        "from scratch. With images, the prompt is an instruction — "
+                        "'change the sari to green', 'put her on a rooftop at night'. "
+                        "Pass more than one to hold a subject across a scene. Max 5.",
+            default=[],
         ),
         aspect_ratio: str = Input(
             description="Output shape. Ignored when editing — the source image's "
@@ -151,7 +155,7 @@ class Predictor(BasePredictor):
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "big")
 
-        editing = image is not None
+        editing = bool(images)
 
         self._set_curl_lora(curl_enhance)
 
@@ -161,11 +165,15 @@ class Predictor(BasePredictor):
         # priors. "make it night" does not want "Bright natural daylight" and a
         # randomly chosen rooftop appended to it.
         #
-        # So on the edit path the layer runs at a tight word budget, which keeps
-        # Tier 1 — the attributes the caller actually asked for, including the
-        # negation rewriting that is useful in any mode — and drops the scene
-        # defaults. Callers who want the full layer on an edit can still ask for
-        # it by turning beenga_prompt_layer on and accepting the result.
+        # So on the edit path the layer runs Tier 1 ONLY — the attributes the
+        # caller explicitly asked for, including the negation rewriting that is
+        # useful in any mode — and drops every scene default.
+        #
+        # A first attempt used a small word budget instead, and was wrong in a way
+        # worth recording: a budget keeps whichever defaults happen to be CHEAP,
+        # so "make it night" came back with "Bright natural daylight, clear
+        # colour" appended. Five words, flatly contradicting the instruction.
+        # Scene defaults fight a source image regardless of what they cost.
         if beenga_prompt_layer:
             # seed as variant: re-rolling varies unspecified garment choice, while
             # the same prompt+seed still reproduces byte-for-byte.
@@ -185,16 +193,29 @@ class Predictor(BasePredictor):
 
         if editing:
             from diffusers.utils import load_image
-            src = load_image(str(image))
-            # Keep the source's shape rather than the aspect_ratio input, so an
-            # edit returns something that lines up with what was sent in. Klein
-            # still needs multiples of 16 or it fails deep in the pipeline with a
-            # shape mismatch that does not name the real cause.
-            w, h = (max(16, (d // 16) * 16) for d in src.size)
-            if (w, h) != src.size:
-                src = src.resize((w, h))
-            call["image"] = src
-            print(f"editing {src.size[0]}x{src.size[1]}")
+
+            if len(images) > MAX_REFERENCE_IMAGES:
+                raise ValueError(
+                    f"at most {MAX_REFERENCE_IMAGES} images, got {len(images)}"
+                )
+
+            # Klein needs dimensions divisible by 16 or it fails deep inside the
+            # pipeline with a shape mismatch that does not name the real cause.
+            # Every reference is conformed, not just the first.
+            def _fit(im):
+                w, h = (max(16, (d // 16) * 16) for d in im.size)
+                return im if (w, h) == im.size else im.resize((w, h))
+
+            srcs = [_fit(load_image(str(p))) for p in images]
+            # Output takes the FIRST reference's shape, so an edit comes back
+            # lined up with what was sent. Later references are context — a
+            # subject to hold, a style to follow — not the frame.
+            w, h = srcs[0].size
+            # The pipeline normalises a bare image to a list internally, but pass
+            # the list explicitly so single and multi-reference take one path.
+            call["image"] = srcs
+            print(f"editing {w}x{h} from {len(srcs)} reference"
+                  f"{'s' if len(srcs) != 1 else ''}")
         else:
             w, h = _dims(aspect_ratio)
         call["width"], call["height"] = w, h
