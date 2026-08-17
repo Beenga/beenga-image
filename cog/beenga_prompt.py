@@ -279,6 +279,32 @@ COMPLEXION_STATED = re.compile(r"\b(fair|wheatish|dusky|deep|dark|medium|light|o
                                r"complexion|skin\s+tone|melanated)\b", re.I)
 LOOK_STATED = re.compile(r"\b(ordinary|average|plain|everyday|unremarkable|documentary|"
                          r"realistic\s+skin|natural\s+variation|glamorous|model-?like)\b", re.I)
+
+
+# --- minors: never apply the beauty default ----------------------------------
+#
+# Audited 2026-08-16 against a content-policy checklist. The layer had no concept
+# of a minor at all: "indian child", "indian kid playing", "indian children in a
+# park" all had "conventionally attractive" appended by the house look. A beauty
+# descriptor on a prompt about a child is indefensible on a public endpoint, and
+# it was there by omission rather than by choice.
+#
+# Deliberately does NOT include bare "girl" or "boy". In Indian English "girl"
+# routinely means a young woman and is the most common word in real prompts here.
+# Those are already handled by the age-reinforcement rule, which forces "clearly a
+# young adult in their early twenties" — the safe direction. "teenager" IS
+# included and keeps that push as well, so it gets both protections.
+#
+# A floor, not a safety system: it reads words, not intent. Beenga adds no
+# moderation layer; platform policies and the base model's terms govern use.
+MINOR = re.compile(
+    r"\b(child|children|childs|kid|kids|toddler|toddlers|infant|infants|baby|"
+    r"babies|newborn|newborns|minor|minors|schoolgirl|schoolboy|schoolkid|"
+    r"schoolchild|school\s*(girl|boy|kid|child|children|student)|preteen|pre-teen|"
+    r"teen|teens|teenager|teenagers|teenaged|teenage|adolescent|adolescents|"
+    r"juvenile|juveniles|underage|under-age)\b"
+    r"|\b([0-9]|1[0-7])\s*[- ]?\s*(year|yr)s?[- ]?old\b"
+    r"|\bage[d]?\s*([0-9]|1[0-7])\b", re.I)
 MALE = re.compile(r"\b(man|men|male|guy|boy|gentleman|groom|father|dad|brother|son)\b", re.I)
 FEMALE_ONLY = re.compile(r"\b(woman|women|female|girl|lady|ladies|bride|mother|sister|"
                          r"daughter)\b", re.I)
@@ -401,9 +427,11 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
             add("modest-drape", MODEST_DRAPE)
             applied.append("modest-drape")
 
+    # MINOR gate: a prompt referencing a child gets no beauty descriptor at all.
     if (PERSON.search(raw) and not FOREIGN.search(raw)
             and not TRADITIONAL_INTENT.search(raw)
-            and not COMPLEXION_STATED.search(raw) and not LOOK_STATED.search(raw)):
+            and not COMPLEXION_STATED.search(raw) and not LOOK_STATED.search(raw)
+            and not MINOR.search(raw)):
         male = bool(MALE.search(raw)) and not FEMALE_ONLY.search(raw)
         region = "" if INDIAN_PLACE.search(raw) else HOUSE_REGION
         male_tail = HOUSE_LOOK_MALE if male and not WANTS_HAIR.search(raw) else ""
