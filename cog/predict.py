@@ -32,6 +32,20 @@ from beenga_prompt import enhance
 
 MODEL = "black-forest-labs/FLUX.2-klein-4B"
 CACHE = "/src/model-cache"
+
+# MUST match the revision= in cog.yaml, and must be passed to from_pretrained.
+#
+# Pinning the download by commit SHA and NOT pinning the load is what disabled
+# version 91361ddc: "consistently fails to complete setup". snapshot_download
+# with an explicit revision writes snapshots/<sha> but does NOT create refs/main,
+# and from_pretrained resolves the default revision THROUGH refs/main. Verified
+# inside that image — try_to_load_from_cache returned None without the revision
+# and the real path with it.
+#
+# The reproducibility fix broke the boot. Same shape as HF_HUB_OFFLINE breaking
+# the LoRA: each change correct alone, fatal together. If you bump one of these
+# two constants, bump both.
+REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
 CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 
 # Word budget for the prompt layer on the EDIT path. Tight on purpose: the
@@ -55,7 +69,7 @@ class Predictor(BasePredictor):
         # local_files_only as well as the env flags: belt and braces, since a
         # single Hub round-trip at setup is enough to fail the whole worker.
         self.pipe = Flux2KleinPipeline.from_pretrained(
-            MODEL, torch_dtype=torch.bfloat16, cache_dir=CACHE,
+            MODEL, revision=REVISION, torch_dtype=torch.bfloat16, cache_dir=CACHE,
             local_files_only=True,
         )
         # Size the loading strategy to whatever card we land on.

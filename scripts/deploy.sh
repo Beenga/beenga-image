@@ -59,7 +59,16 @@ EOF
 
 grep -q "revision='e7b7dc27f91deacad38e78976d1f2b499d76a294'" cog/cog.yaml \
   || die "cog.yaml is not pinned to the benchmarked revision"
-echo "  cog.yaml   base model pinned"
+# Pinning the DOWNLOAD without pinning the LOAD is what disabled version
+# 91361ddc for "consistently fails to complete setup": snapshot_download with an
+# explicit revision writes snapshots/<sha> but no refs/main, and from_pretrained
+# resolves the default revision through refs/main. Both must agree, always.
+cogrev=$(grep -o "revision='[a-f0-9]\{40\}'" cog/cog.yaml | head -1 | grep -o '[a-f0-9]\{40\}')
+predrev=$(grep -o 'REVISION = "[a-f0-9]\{40\}"' cog/predict.py | grep -o '[a-f0-9]\{40\}')
+[[ -n "$predrev" ]] || die "predict.py has no REVISION — from_pretrained must be pinned too"
+[[ "$cogrev" == "$predrev" ]] \
+  || die "revision mismatch: cog.yaml=$cogrev predict.py=$predrev"
+echo "  revisions  cog.yaml and predict.py agree (${predrev:0:12})"
 
 # The Python port is what actually runs in production; the JS is the reference.
 # They are hand-maintained and drift, so never push without checking.
@@ -146,9 +155,38 @@ ssh -o BatchMode=yes "root@$IP" "
   setsid nohup cog push $IMAGE --separate-weights > /root/push.log 2>&1 < /dev/null &
   echo started
 "
-echo "  streaming; ^C is safe, the build keeps running"
-ssh -o BatchMode=yes -o ServerAliveInterval=30 "root@$IP" \
-  'while pgrep -f "cog push" >/dev/null; do sleep 30; done; tail -20 /root/push.log'
+# Poll with a fresh connection each time. A single long-lived streaming ssh
+# dropped mid-build on the last run ("Connection reset by peer"), and under set -e
+# that aborted the script before the mirror step — while cog push itself carried
+# on under setsid nohup. A dropped connection must not end the deploy.
+echo "  polling until the push finishes (a dropped connection is survivable)"
+while true; do
+  if ssh -o BatchMode=yes -o ConnectTimeout=10 "root@$IP" \
+       'pgrep -f "cog push" >/dev/null' 2>/dev/null; then
+    sleep 60
+  elif ssh -o BatchMode=yes -o ConnectTimeout=10 "root@$IP" true 2>/dev/null; then
+    break                       # reachable and no push running: finished
+  else
+    echo "  ssh unreachable, retrying in 60s"; sleep 60
+  fi
+done
+ssh -o BatchMode=yes "root@$IP" 'tail -20 /root/push.log' || true
+
+# cog push exiting is not the same as Replicate accepting the version. The last
+# build pushed cleanly and was then DISABLED for failing setup, so check.
+say "checking Replicate accepted the version"
+sleep 60
+newv=$(curl -s -H "Authorization: Bearer $REPLICATE_API_TOKEN" \
+  "https://api.replicate.com/v1/models/beenga/beenga-image-1" \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['latest_version']['id'])")
+probe=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://api.replicate.com/v1/predictions \
+  -H "Authorization: Bearer $REPLICATE_API_TOKEN" -H "Content-Type: application/json" \
+  -d "{\"version\":\"$newv\",\"input\":{\"prompt\":\"a test\",\"seed\":1}}")
+echo "  latest_version ${newv:0:12}  prediction probe HTTP $probe"
+if [[ "$probe" == "422" ]]; then
+  echo "  A 422 here usually means the version was DISABLED for failing setup." >&2
+  echo "  Read Setup logs on the model version page, not the summary banner." >&2
+fi
 
 # ── optional: mirror the base model from the droplet ─────────────────────────
 # Two attempts from the laptop failed. The 7.75GB downloads succeeded and the
