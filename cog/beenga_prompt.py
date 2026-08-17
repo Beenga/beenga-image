@@ -450,7 +450,12 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
     if contemporary and INDIA.search(raw) and not TRADITIONAL_INTENT.search(raw):
         add("contemporary-default", CONTEMPORARY)
         applied.append("contemporary-default")
-        if not GARMENT.search(raw):
+        # Only if there IS someone to dress. "indian office" and "office desk in
+        # delhi" were both getting "Modern everyday clothing." appended — a
+        # garment instruction on a prompt with no person in it. Same shape as the
+        # still-life bug NO_PEOPLE was added for: a rule firing on the presence
+        # of India rather than the presence of a person.
+        if not GARMENT.search(raw) and PERSON.search(raw):
             add("modern-dress-default", MODERN_DRESS)
             applied.append("modern-dress-default")
 
