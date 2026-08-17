@@ -232,6 +232,33 @@ DEITY_ICONS = [
 # of a house are matched explicitly; named furniture counts too, since "on the
 # bedside table" locates a scene as surely as naming the room does.
 SETTING_NAMED = re.compile(VENUE.pattern +
+                           # Indian venue vocabulary the first VENUE list
+                           # missed. Without these the layer treats the prompt as
+                           # scene-less and OVERRIDES it with one of SCENES,
+                           # which produced absurd output: "at a mela" came back
+                           # with "a modern apartment balcony overlooking the
+                           # city" appended, "at a ghat" with "a leafy
+                           # residential lane", "at a factory" with "a small
+                           # local cafe interior". Thirteen of twenty-six common
+                           # scene words were being overridden.
+                           #
+                           # Same shape as `clean shave` and the city-only INDIA
+                           # list: the benchmarks used a narrow vocabulary, so
+                           # everything outside it went untested.
+                           r"|\b(concert|gig|festival|mela|fair|procession|parade|rally|"
+                           r"tea\s*stall|dhaba|canteen|railway|platform|bus\s*stand|"
+                           r"bus\s*stop|depot|auto\s*stand|rickshaw|taxi\s*stand|junction|"
+                           r"crossing|chowk|bazaar|bazar|haat|mandi|ghat|riverbank|"
+                           r"riverside|river|lake|pond|backwater|canal|coast|shore|"
+                           r"harbour|port|jetty|desert|dune|hill|hills|mountain|valley|"
+                           r"forest|jungle|plantation|orchard|farm|farmland|paddy|field|"
+                           r"fields|village|hamlet|town|construction|factory|workshop|"
+                           r"godown|warehouse|shop|store|showroom|salon|parlour|gym|"
+                           r"clinic|hospital|pharmacy|library|museum|gallery|airport|"
+                           r"terminal|stadium|ground|maidan|playground|court|pool|hotel|"
+                           r"lobby|lounge|rooftop\s*bar|terrace\s*garden|verandah|veranda|"
+                           r"courtyard|balcony|staircase|corridor|alley|gully|lane|"
+                           r"bylane)\w*\b"
                            # Spelled out rather than \w*room\w*, which would also
                            # match "groom", "bridegroom", "broom" and "mushroom"
                            # and silently suppress scene-variety on a wedding shot.
@@ -255,6 +282,18 @@ SCENES = [
     "a small local cafe interior",
     "a metro station platform",
     "a rooftop terrace at the top of an apartment block",
+    "a covered market lane with produce stalls",
+    "a small-town high street with painted shopfronts",
+    "a roadside tea stall with steel benches",
+    "a railway platform with waiting passengers",
+    "a village lane with low houses and open sky",
+    "the edge of a paddy field under a wide sky",
+    "a riverside ghat with worn stone steps",
+    "a coastal road with palms and parked boats",
+    "a co-working office with glass partitions",
+    "a neighbourhood park in the early evening",
+    "a lit-up street during a local festival",
+    "a workshop interior with tools on the wall",
 ]
 
 # --- focus ------------------------------------------------------------------
