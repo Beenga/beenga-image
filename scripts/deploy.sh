@@ -125,6 +125,20 @@ fi
 
 # ── droplet ──────────────────────────────────────────────────────────────────
 say "creating droplet ($SIZE, $REGION)"
+# Refuse to create a second droplet with the same name. The lookup below finds
+# by NAME and takes the first match, so an undestroyed droplet from a previous
+# run silently wins — the script then builds on the stale box while the one it
+# just created sits unused and billing. That happened; this stops it.
+existing=$(doctl compute droplet list --format ID,Name --no-header \
+  | awk -v n="$NAME" '$2==n{print $1}')
+if [[ -n "$existing" ]]; then
+  echo "  a droplet named $NAME already exists:" >&2
+  for e in $existing; do echo "    $e" >&2; done
+  echo "  destroy it first, or set DROPLET_NAME to something else:" >&2
+  echo "    doctl compute droplet delete $(echo $existing | cut -d' ' -f1) --force" >&2
+  die "refusing to create a duplicate name"
+fi
+
 doctl compute droplet create "$NAME" --region "$REGION" --size "$SIZE" \
   --image docker-20-04 --ssh-keys "$SSH_KEY" --wait
 ID=$(doctl compute droplet list --format ID,Name --no-header | awk -v n="$NAME" '$2==n{print $1; exit}')
