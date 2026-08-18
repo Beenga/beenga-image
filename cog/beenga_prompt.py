@@ -155,15 +155,17 @@ PERSON_WORD = re.compile(
     r"family|group|crowd|child|children|kid|student|model|portrait|face|hair|male|"
     r"female|guy|gentleman|bride|groom|"
     r"teen|teens|teenager|teenagers|adult|adults|elder|elderly|senior|seniors|"
-    r"youth|toddler|infant|baby|grandmother|grandfather|granny|"
+    r"youth|toddler|infant|grandmother|grandfather|granny|"
     r"mother|father|sister|brother|daughter|son|aunt|aunty|auntie|uncle|cousin|"
     r"wife|husband|bhai|didi|bhabhi|beta|beti|amma|appa|maa|papa|dada|dadi|nani|nana|"
     r"farmer|shopkeeper|vendor|hawker|driver|teacher|doctor|nurse|engineer|"
     r"entrepreneur|founder|professional|worker|labourer|tailor|barber|"
-    r"chef|cook|waiter|guard|officer|policeman|soldier|priest|artist|musician|"
-    r"dancer|singer|player|athlete|actor|actress|influencer|blogger|"
-    r"customer|passenger|commuter|shopper|pedestrian|villager|"
-    r"someone|somebody|individual|figure|subject|character|human)\b", re.I)
+    r"chef|cook|waiter|officer|policeman|soldier|priest|artist|musician|"
+    r"dancer|singer|athlete|actor|actress|influencer|blogger|"
+    r"customer|passenger|commuter|shopper|pedestrian|villager)\b", re.I)
+# Deliberately NOT included: figure, subject, character, human, someone,
+# somebody, individual, player, guard, baby — each is more often a thing than
+# a person ("a chess figure", "a player piano", "a guard rail", "baby corn").
 
 # A prompt can say there is nobody in the picture, and until 2026-08-16 this layer
 # could not hear it: PERSON matched the word "people" INSIDE "no people in frame",

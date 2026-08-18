@@ -132,4 +132,46 @@ if (Object.keys(mi).length) {
   }
 } else console.log("\nno silent no-ops");
 
-process.exit(violations.length || missing.length ? 1 : 0);
+
+// ── negative probes ─────────────────────────────────────────────────────────
+//
+// The cross-product above proves every GATE is correct. It cannot prove the
+// vocabulary lists are, because it builds its probes from words I chose — the
+// same blind spot that produced the bugs.
+//
+// This is the other half: prompts where a listed word appears in a DIFFERENT
+// sense. Widening a list to close one hole opens others, and the generic words
+// are where they open. Every false positive ever found goes here permanently,
+// so the list only grows and a fix can never silently regress.
+const NEGATIVE = [
+  // [prompt, rule that must NOT fire]
+  ["a chess figure on a board",              "hair-realism"],
+  ["the subject of the painting is a mango", "hair-realism"],
+  ["a player piano in a hall",               "hair-realism"],
+  ["a guard rail on a highway",              "hair-realism"],
+  ["a character from a story",               "hair-realism"],
+  ["a human figure sculpture",               "hair-realism"],
+  ["baby corn on a plate",                   "hair-realism"],
+  ["an automatic camera",                    "hair-realism"],
+  ["a table lamp",                           "hair-realism"],
+  ["a cot bed frame",                        "hair-realism"],
+  ["a mat woven from grass",                 "hair-realism"],
+  ["a counter top with spices",              "hair-realism"],
+  ["no people in frame, an empty street",    "house-look"],
+  ["a still life of brass pots",             "house-look"],
+  ["an indian child",                        "house-look"],
+  ["an indian schoolgirl",                   "house-look"],
+  ["a 12 year old indian girl",              "house-look"],
+  // KNOWN AND ACCEPTED: "model" is a person word because "a model in a sari" is
+  // the common case in this domain. "a model train" is collateral, pre-dates
+  // today's expansion, and is not worth breaking the common case for.
+];
+
+let negFails = 0;
+for (const [prompt, rule] of NEGATIVE) {
+  const ids = new Set(enhance(prompt, { variant: "11" }).applied.map((a) => a.split(":")[0]));
+  if (ids.has(rule)) { negFails++; console.log(`  FALSE POSITIVE  ${rule}  ${JSON.stringify(prompt)}`); }
+}
+console.log(negFails ? `\n${negFails} false positives` : `\nnegative probes: ${NEGATIVE.length} clean`);
+
+process.exit(violations.length || missing.length || negFails ? 1 : 0);
