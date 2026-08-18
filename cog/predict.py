@@ -61,6 +61,29 @@ CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 # "make it night". On an edit the scenery goes entirely.
 EDIT_BUDGET_WORDS = 0
 
+# Word budget for GENERATION. 0 means: your prompt, the negation rewrites, the
+# reinforcements for what you actually asked for, and the contemporary default —
+# nothing else.
+#
+# Measured across six prompt types, three seeds, images compared side by side.
+# The full layer added ~65 uninvited words and was worse in 5 of 6:
+#
+#   "indian couple on bed"   cropped at the waist 3/3, and once rendered two
+#                            women. Tier 1 showed whole seated figures 3/3.
+#   "indian family dinner"   moved the family outdoors into a street.
+#   "indian street market"   emptier and washed out.
+#   "beautiful delhi girl"   lost the street, plain wall behind.
+#   "deep dark complexion"   came back LIGHTER than Tier 1 — the layer was
+#                            diluting its own flagship measurement.
+#
+# 38 of those 65 words described faces, hair strands, hairlines and skin, which
+# is why scenes kept becoming portraits. The rules that survive here fire only
+# on words the caller typed, so they need no vocabulary to enumerate — which is
+# the other half of why the defaults kept breaking on mela, bed, farmer, office.
+#
+# Set to false to restore the old behaviour for comparison.
+GENERATE_BUDGET_WORDS = 0
+
 # Matches the upstream Klein model's documented ceiling.
 MAX_REFERENCE_IMAGES = 5
 
@@ -195,7 +218,7 @@ class Predictor(BasePredictor):
             # seed as variant: re-rolling varies unspecified garment choice, while
             # the same prompt+seed still reproduces byte-for-byte.
             final, applied = enhance(prompt, variant=str(seed),
-                                     budget=EDIT_BUDGET_WORDS if editing else False)
+                                     budget=EDIT_BUDGET_WORDS if editing else GENERATE_BUDGET_WORDS)
         else:
             final, applied = prompt, []
         if applied:

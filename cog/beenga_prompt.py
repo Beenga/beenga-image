@@ -114,7 +114,10 @@ FRAMING_STATED = re.compile(
     r"\b(close[-\s]?up|closeup|headshot|head\s+shot|portrait|bust|face\s+only|"
     r"waist[-\s]?up|half[-\s]?body|shoulders\s+up|crop|cropped|macro|"
     r"full[-\s]?body|full[-\s]?length|head[-\s]?to[-\s]?toe|wide\s+shot)\b", re.I)
-FULL_FRAME = "The full figure is inside the frame, from head to feet."
+# No body-part nouns. The first version read "from head to feet", naming two of
+# them on exactly the prompts where anatomy fails hardest. Describe the FRAMING,
+# never the body inside it — see the header note about the third hand.
+FULL_FRAME = "Framed wide, with the entire subject inside the frame."
 
 # --- cartoon style default ---------------------------------------------------
 # "cartoon" left to itself lands on flat 2D illustration, which is not what
@@ -679,7 +682,12 @@ RULE_BUDGET = {
         # rather than an adherence one. It should never outweigh the request.
     },
     "contemporary-default": {
-        "tier": 3, "full": CONTEMPORARY,
+        # always: survives any budget, in terse form. Measured across six prompt
+        # types this is the ONE default that earns its keep — without it "indian
+        # woman cooking" comes back in a sari, because the model's own prior for
+        # India is ceremonial. Every other default stripped scenes, cropped
+        # bodies or lightened complexions.
+        "tier": 3, "always": True, "full": CONTEMPORARY,
         "terse": "Present-day India, modern surroundings.",
     },
     "house-look": {
@@ -700,7 +708,7 @@ RULE_BUDGET = {
     "deity-icon": {"tier": 2, "full": None, "terse": None, "dynamic": "DEITY_ICONS"},
     "dance-venue-default": {"tier": 2, "full": DANCE_VENUE, "terse": None},
     "full-frame": {
-        "tier": 2, "full": FULL_FRAME, "terse": "The whole figure in frame.",
+        "tier": 2, "full": FULL_FRAME, "terse": "Framed wide, whole subject in frame.",
     },
     "cartoon-3d": {
         "tier": 2, "full": CARTOON_3D,
@@ -753,6 +761,14 @@ def _spend_budget(segs, limit):
         if meta(s["id"])["tier"] == 1:
             chosen[i] = s["text"]
             spent += w(s["text"])
+
+    # Then anything flagged `always`, in terse form, also unconditionally.
+    for i, s in enumerate(segs):
+        m = meta(s["id"])
+        if m.get("always") and i not in chosen:
+            t = m.get("terse") or s["text"]
+            chosen[i] = t
+            spent += w(t)
 
     for tier in (2, 3):
         for i, s in enumerate(segs):
