@@ -98,6 +98,24 @@ DANCE_VENUE = "An ordinary domestic living room."
 
 
 
+
+# --- framing -----------------------------------------------------------------
+# Klein frames almost everything as a head-and-shoulders portrait. Asked for a
+# couple lying on a bed it returned their upper halves and cropped the rest.
+# When the pose only makes sense with the whole figure visible, say so —
+# positively, never "not cropped", since naming the crop argues for it.
+FULL_BODY_POSE = re.compile(
+    r"\b(lying|lie|lies|laying|reclining|reclined|sprawled|stretched\s+out|"
+    r"sitting|seated|squatting|kneeling|crouching|crossed[-\s]?legs|"
+    r"standing|walking|running|jogging|jumping|leaping|dancing|stretching|"
+    r"yoga|asana|exercising|working\s+out|cycling|riding|climbing|"
+    r"full[-\s]?body|full[-\s]?length|head[-\s]?to[-\s]?toe|whole\s+body)\b", re.I)
+FRAMING_STATED = re.compile(
+    r"\b(close[-\s]?up|closeup|headshot|head\s+shot|portrait|bust|face\s+only|"
+    r"waist[-\s]?up|half[-\s]?body|shoulders\s+up|crop|cropped|macro|"
+    r"full[-\s]?body|full[-\s]?length|head[-\s]?to[-\s]?toe|wide\s+shot)\b", re.I)
+FULL_FRAME = "The full figure is inside the frame, from head to feet."
+
 # --- cartoon style default ---------------------------------------------------
 # "cartoon" left to itself lands on flat 2D illustration, which is not what
 # people mean by it now — the modern default reading is a 3D animated feature.
@@ -296,8 +314,17 @@ SETTING_NAMED = re.compile(VENUE.pattern +
                            r"clinic|hospital|pharmacy|library|museum|gallery|airport|"
                            r"terminal|stadium|ground|maidan|playground|court|pool|hotel|"
                            r"lobby|lounge|rooftop\s*bar|terrace\s*garden|verandah|veranda|"
-                           r"courtyard|balcony|staircase|corridor|alley|gully|lane|"
-                           r"bylane)\w*\b"
+                           r"courtyard|balcony|staircase|corridor|alley|gully|lane|bylane|"
+                           # Furniture and surfaces. "indian couple on bed" was
+                           # getting "a busy neighbourhood street" appended over
+                           # it — a bed outdoors. "bedroom" and "sofa" were
+                           # recognised; "bed" and "chair" were not.
+                           r"bed|beds|bedside|cot|charpai|charpoy|mattress|couch|"
+                           r"sofa|settee|divan|chair|chairs|stool|bench|swing|"
+                           r"jhula|hammock|table|desk|counter|carpet|rug|mat|"
+                           r"floor|steps|stairs|ladder|windowsill|sill|car|auto|"
+                           r"bike|scooter|motorcycle|cycle|bicycle|bus|train|"
+                           r"boat|pool|poolside|bathtub|shower|mirror|window)\w*\b"
                            # Spelled out rather than \w*room\w*, which would also
                            # match "groom", "bridegroom", "broom" and "mushroom"
                            # and silently suppress scene-variety on a wedding shot.
@@ -500,6 +527,11 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
 
     # SETTING_NAMED, not VENUE. VENUE is the narrow original list, so "dancing
     # at a mela" got "An ordinary domestic living room" over the named setting.
+    if (PERSON.search(raw) and FULL_BODY_POSE.search(raw)
+            and not FRAMING_STATED.search(raw)):
+        add("full-frame", FULL_FRAME)
+        applied.append("full-frame")
+
     if CARTOON.search(raw) and not STYLE_STATED.search(raw):
         add("cartoon-3d", CARTOON_3D)
         applied.append("cartoon-3d")
@@ -665,6 +697,9 @@ RULE_BUDGET = {
     "scene-variety": {"tier": 2, "full": None, "terse": None, "dynamic": "SCENES"},
     "deity-icon": {"tier": 2, "full": None, "terse": None, "dynamic": "DEITY_ICONS"},
     "dance-venue-default": {"tier": 2, "full": DANCE_VENUE, "terse": None},
+    "full-frame": {
+        "tier": 2, "full": FULL_FRAME, "terse": "The whole figure in frame.",
+    },
     "cartoon-3d": {
         "tier": 2, "full": CARTOON_3D,
         "terse": "Modern 3D animated style, volumetric forms, soft lighting.",

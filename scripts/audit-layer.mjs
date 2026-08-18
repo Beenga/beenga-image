@@ -36,6 +36,8 @@ const SETTING = [
   { t: " at a concert", named: true },
   { t: " at a ghat", named: true },
   { t: " in a village", named: true },
+  { t: " on a bed", named: true },
+  { t: " on a chair", named: true },
 ];
 const GARMENT = [
   { t: "", garment: false },
@@ -52,7 +54,9 @@ const MODIFIER = [
   { t: ", as a 2d cartoon", nonPhoto: true, cartoon: true, styleStated: true },
   { t: ", as an anime", nonPhoto: true, cartoon: false, styleStated: true },
   { t: ", at night", lighting: true },
-  { t: ", dancing", dance: true },
+  { t: ", dancing", dance: true, pose: true },
+  { t: ", lying down", pose: true },
+  { t: ", shot as a close-up", framing: true },
   { t: ", long thick braid", braid: true },
   { t: ", clean shaven", shave: true },
 ];
@@ -71,6 +75,7 @@ const INVARIANTS = {
   "contemporary-default": (f) => !f.traditional,
   "daylight-default":     (f) => !f.lighting,
   "cartoon-3d":           (f) => f.cartoon && !f.styleStated,
+  "full-frame":           (f) => f.person && f.pose && !f.framing,
 };
 // Rules that SHOULD fire when the condition holds — catches silent no-ops.
 const EXPECTED = {
