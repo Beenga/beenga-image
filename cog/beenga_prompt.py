@@ -119,6 +119,41 @@ FRAMING_STATED = re.compile(
 # never the body inside it — see the header note about the third hand.
 FULL_FRAME = "Framed wide, with the entire subject inside the frame."
 
+# --- is the face actually the subject? ---------------------------------------
+# house-look and hair-realism are ~30 words describing a face and hair, and that
+# description mass MOVES THE CAMERA: measured on "an indian girl with two
+# pigtails at a delhi market", adding them cropped a full market scene to a
+# headshot, and adding FULL_FRAME on top did not pull it back — 9 words of
+# framing cannot out-vote 30 words of face.
+#
+# That is the crop bug. It was previously "fixed" by dropping both rules from
+# every prompt, which also dropped the hair and skin detail they buy on the
+# prompts where that detail is the only thing in frame.
+FRAMING_CLOSE = re.compile(
+    r"\b(close[-\s]?up|closeup|headshot|head\s+shot|portrait|bust|face\s+only|"
+    r"shoulders\s+up|waist[-\s]?up|half[-\s]?body|macro)\b", re.I)
+FRAMING_WIDE = re.compile(
+    r"\b(full[-\s]?body|full[-\s]?length|head[-\s]?to[-\s]?toe|whole\s+body|"
+    r"wide\s+shot)\b", re.I)
+
+# Region and grooming are identity decisions, not decoration, and are short
+# enough not to drag the camera. They survive on scene prompts; the long beauty
+# description does not.
+HOUSE_REGION_ALONE = "North Indian appearance."
+
+
+def face_is_subject(raw):
+    """Explicit close framing wins, then explicit wide, then a body-in-frame
+    pose, then the fallback: a prompt with no setting is effectively a portrait.
+    """
+    if FRAMING_CLOSE.search(raw):
+        return True
+    if FRAMING_WIDE.search(raw):
+        return False
+    if FULL_BODY_POSE.search(raw):
+        return False
+    return not SETTING_NAMED.search(raw)
+
 # --- cartoon style default ---------------------------------------------------
 # "cartoon" left to itself lands on flat 2D illustration, which is not what
 # people mean by it now — the modern default reading is a 3D animated feature.
@@ -293,6 +328,12 @@ DEITY_ICONS = [
 # — overriding a setting the prompt had already stated. Compound rooms and the rest
 # of a house are matched explicitly; named furniture counts too, since "on the
 # bedside table" locates a scene as surely as naming the room does.
+# Plurals only, NOT \w*. The wildcard made `car` match "cartoon", `port` match
+# "portrait", `bus` match "business", `farm` match "farmer", `study` match
+# "studying" and `ground` match "groundwater" — twelve measured false
+# positives, each silently telling the layer a scene-less prompt had a named
+# setting. Compound settings still wanted are listed explicitly, not reached
+# by wildcard.
 SETTING_NAMED = re.compile(VENUE.pattern +
                            # Indian venue vocabulary the first VENUE list
                            # missed. Without these the layer treats the prompt as
@@ -329,21 +370,21 @@ SETTING_NAMED = re.compile(VENUE.pattern +
                            r"jhula|hammock|table|desk|counter|carpet|rug|mat|"
                            r"floor|steps|stairs|ladder|windowsill|sill|car|auto|"
                            r"bike|scooter|motorcycle|cycle|bicycle|bus|train|"
-                           r"boat|pool|poolside|bathtub|shower|mirror|window)\w*\b"
+                           r"boat|pool|poolside|bathtub|shower|mirror|window)(?:s|es)?\b"
                            # Spelled out rather than \w*room\w*, which would also
                            # match "groom", "bridegroom", "broom" and "mushroom"
                            # and silently suppress scene-variety on a wedding shot.
                            r"|\b(bedroom|bathroom|washroom|restroom|classroom|storeroom|"
                            r"showroom|ballroom|guestroom|playroom|boardroom|living\s+room|"
                            r"drawing\s+room|dining\s+room|sitting\s+room|waiting\s+room|"
-                           r"kitchen)\w*\b"
+                           r"kitchen)(?:s|es)?\b"
                            r"|\b(hallway|corridor|landing|porch|doorway|staircase|stairwell|"
                            r"basement|attic|study|nursery|balcony|verandah|veranda|patio|"
                            r"driveway|pavement|sidewalk|bedside|sofa|couch|armchair|worktop|"
-                           r"countertop|counter|dresser|nightstand)\w*\b"
+                           r"countertop|counter|dresser|nightstand)(?:s|es)?\b"
                            r"|\b(market|bazaar|temple|gym|shop|beach|hill|"
                            r"mountain|village|farm|airport|hospital|library|museum|stadium|"
-                           r"terrace)\w*\b", re.I)
+                           r"terrace)(?:s|es)?\b", re.I)
 SCENES = [
     "a busy neighbourhood street with shopfronts and parked scooters",
     "a leafy residential lane with low boundary walls",
@@ -381,8 +422,14 @@ def _hash(s):
     return h
 
 # --- house look -------------------------------------------------------------
-# Beenga's commercial default: North Indian, fair, sharp-featured, and for men
-# clean-shaven. One rule rather than four — each addition dilutes the rest.
+# Beenga's commercial default: North Indian, sharp-featured, attractive, and for
+# men clean-shaven. One rule rather than four — each addition dilutes the rest.
+#
+# Complexion is deliberately NOT part of it. This comment used to say "fair",
+# describing behaviour removed in d2f94b1; HOUSE_LOOK below has carried no
+# complexion term since. Defaulting fair would repeat the exact bias this
+# project measures and corrects in other models. Left uncorrected the stale
+# wording invites someone to "restore" it.
 # Departs from the original spec's anti-default stance by choice, and yields the
 # moment the user states a complexion, ethnicity, beauty level or facial hair.
 COMPLEXION_STATED = re.compile(r"\b(fair|wheatish|dusky|deep|dark|medium|light|olive|"
@@ -563,11 +610,23 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         male_tail = HOUSE_LOOK_MALE if male and not WANTS_HAIR.search(raw) else ""
         # The clean-shaven default is grooming, not decoration — it survives
         # trimming even when the rest of the house look does not.
-        add("house-look", region + HOUSE_LOOK + male_tail,
-            keep=region + RULE_BUDGET["house-look"]["terse"] + male_tail)
-        applied.append("house-look")
+        if face_is_subject(raw):
+            add("house-look", region + HOUSE_LOOK + male_tail,
+                keep=region + RULE_BUDGET["house-look"]["terse"] + male_tail)
+            applied.append("house-look")
+        else:
+            # Scene prompt: keep identity and grooming, drop the beauty
+            # description that would crop the scene away. Emit nothing when
+            # both halves are empty rather than an empty sentence.
+            identity = (HOUSE_REGION_ALONE if region else "") + male_tail
+            if identity:
+                add("house-identity", identity, keep=identity)
+                applied.append("house-identity")
 
-    if PERSON.search(raw) and not NON_PHOTO.search(raw):
+    # Same gate. Hair strand detail is invisible at scene distance and is the
+    # single most expensive rule in the layer, so spending it on a market scene
+    # buys nothing and costs the framing.
+    if PERSON.search(raw) and not NON_PHOTO.search(raw) and face_is_subject(raw):
         add("hair-realism", HAIR_REALISM)
         applied.append("hair-realism")
 

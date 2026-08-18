@@ -57,16 +57,29 @@ const MODIFIER = [
   { t: ", dancing", dance: true, pose: true },
   { t: ", lying down", pose: true },
   { t: ", shot as a close-up", framing: true },
+  { t: ", full body shot", wide: true },
   { t: ", long thick braid", braid: true },
   { t: ", clean shaven", shave: true },
 ];
 
 // ── invariants: rule -> may it fire, given the facts? ───────────────────────
 // Returning false means "this rule must NOT be present for this prompt".
+// Mirrors faceIsSubject() in lib/prompt.mjs. Explicit close framing wins, then
+// explicit wide, then a body-in-frame pose, then: no setting named == portrait.
+//
+// This exists because the face-detail rules are ~30 words describing a face, and
+// that description mass moves the camera — on a scene prompt they crop the scene
+// to a headshot. Keeping the predicate duplicated here is deliberate: if the
+// layer's gate changes and this does not, the cross-product below fails loudly
+// rather than the crop bug returning unnoticed.
+const faceSubject = (f) =>
+  f.framing ? true : f.wide ? false : f.pose ? false : !f.named;
+
 const INVARIANTS = {
   "modern-dress-default": (f) => f.person && !f.garment && !f.traditional,
-  "house-look":           (f) => f.person && !f.minor && !f.complexion && !f.look && !f.traditional,
-  "hair-realism":         (f) => f.person && !f.nonPhoto,
+  "house-look":           (f) => f.person && !f.minor && !f.complexion && !f.look && !f.traditional && faceSubject(f),
+  "house-identity":       (f) => f.person && !f.minor && !f.complexion && !f.look && !f.traditional && !faceSubject(f),
+  "hair-realism":         (f) => f.person && !f.nonPhoto && faceSubject(f),
   "scene-variety":        (f) => f.person && !f.named,
   "sari-variety":         (f) => f.sari,
   "modest-drape":         (f) => f.sari,
@@ -81,7 +94,7 @@ const INVARIANTS = {
 const EXPECTED = {
   "sari-variety":  (f) => f.sari && !f.traditional,
   "deity-icon":    (f) => f.deity,
-  "hair-realism":  (f) => f.person && !f.nonPhoto,
+  "hair-realism":  (f) => f.person && !f.nonPhoto && faceSubject(f),
   "cartoon-3d":    (f) => f.cartoon && !f.styleStated,
 };
 
@@ -162,6 +175,29 @@ const NEGATIVE = [
   ["an indian child",                        "house-look"],
   ["an indian schoolgirl",                   "house-look"],
   ["a 12 year old indian girl",              "house-look"],
+  // SETTING_NAMED wildcard false positives. The group ended `)\\w*\\b`, so `car`
+  // matched "cartoon", `port` matched "portrait", `bus` "business", `farm`
+  // "farmer", `study` "studying", `ground` "groundwater". Each one silently told
+  // the layer that a scene-less prompt had a named setting, which suppressed
+  // scene-variety and — once the face-detail gate landed — swapped house-look
+  // for house-identity. Invisible until a rule was gated on SETTING_NAMED.
+  // house-identity firing here is the tell: it only fires when a setting matched.
+  ["an indian woman, as a cartoon",          "house-identity"],
+  ["a portrait of an indian woman",          "house-identity"],
+  // NB: not "running a business" — `running` is a full-body pose, so
+  // house-identity there is correct and the probe would test the wrong gate.
+  ["an indian woman with a small business",  "house-identity"],
+  ["an indian farmer",                       "house-identity"],
+  ["an indian woman studying",               "house-identity"],
+  ["an indian woman, automatic camera",      "house-identity"],
+  ["an indian woman holding a tablet",       "house-identity"],
+  ["an indian woman at a carnival",          "house-identity"],
+  ["an indian woman, career woman",          "house-identity"],
+  ["an indian woman, counterfeit notes",     "house-identity"],
+  ["an indian woman near groundwater",       "house-identity"],
+  ["an indian woman near bushes",            "house-identity"],
+  ["an indian woman, a serious matter",      "house-identity"],
+  ["an indian woman on the top storey",      "house-identity"],
   // KNOWN AND ACCEPTED: "model" is a person word because "a model in a sari" is
   // the common case in this domain. "a model train" is collateral, pre-dates
   // today's expansion, and is not worth breaking the common case for.
