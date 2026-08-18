@@ -572,6 +572,14 @@ FRAGILE = [
      "Exactly two separate braids, clearly distinct from each other."),
     (re.compile(r"\b(one|single)\s+(thick\s+)?braid\b", re.I),
      "Exactly one single braid."),
+    # "long thick braided hair" — no number at all — matched NEITHER rule above,
+    # so nothing constrained the count and the model returned two braids of
+    # different lengths. Unnumbered "braided hair" means one braid in normal use;
+    # an explicit plural or a pigtail word still wins.
+    (lambda raw: bool(re.search(r"\b(braid|braided|plait|plaited)\b", raw, re.I))
+                 and not re.search(r"\b(braids|plaits|pigtails?|twintails?|two|2|"
+                                   r"double|twin|both|pair)\b", raw, re.I),
+     "The hair is worn in a single braid."),
     (re.compile(r"\bsleeveless\b", re.I),
      "The blouse ends at a narrow shoulder strap with the armhole cut high and clean."),
     (re.compile(r"\bfull[- ]sleeve", re.I),
