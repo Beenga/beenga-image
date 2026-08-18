@@ -71,7 +71,7 @@ INDIA = re.compile(
     r"maharashtra)\b", re.I)
 
 TRADITIONAL_INTENT = re.compile(
-    r"\b(traditional|classical|lehenga|sherwani|ghagra|ghaghra|achkan|jodhpuri|mundu|veshti|dhoti|angavastram|pattu|langa|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
+    r"\b(traditional|classical|bride|groom|priest|pandit|purohit|sadhu|sant|monk|nun|lehenga|sherwani|ghagra|ghaghra|achkan|jodhpuri|mundu|veshti|dhoti|angavastram|pattu|langa|bharatanatyam|kathak|kuchipudi|odissi|bhangra|"
     r"garba|temple|ritual|ceremon|wedding|bridal|festival|puja|pooja|diwali|"
     r"navratri|historical|period|ancient|mytholog|village|rural|folk|hanuman|krishna|krishn|radha|\brama\b|\bram\b|shiva|shiv\b|vishnu|ganesh|ganpati|lakshmi|laxmi|durga|kali\b|saraswati|brahma|parvati|murugan|ayyappa|venkatesw|balaji|jagannath|nataraj|buddha|mahavir|nanak|sai baba|deity|goddess|\bgod\b|\blord\b|avatar|ramayana|mahabharata|bhagavad|bhakti|devotional|aarti|mandir|idol|murti|shrine|pilgrim|sadhu|saint|yogi|ascetic|epic\b|scripture|vedic|sanskrit)\w*\b", re.I)
 
@@ -698,8 +698,10 @@ RULE_BUDGET = {
     "daylight-default": {"tier": 3, "full": DAYLIGHT, "terse": None},
     # always too, and only three words. Dropping it sent "indian woman cooking"
     # back into a sari — the ceremonial prior this project exists to counter.
-    "modern-dress-default": {"tier": 3, "always": True, "full": MODERN_DRESS,
-                             "terse": None},
+    # NOT always. Measured against the soft wording alone: identical clothing
+    # outcomes, so the hard command earned nothing — while forcing "Modern
+    # everyday clothing" onto a bride, a priest and a farmer.
+    "modern-dress-default": {"tier": 3, "full": MODERN_DRESS, "terse": None},
 
     # Tier 2: conditional on what the user said
     "modest-drape": {
