@@ -81,7 +81,34 @@ CONTEMPORARY = ("Present-day contemporary India, modern well-maintained surround
 GARMENT = re.compile(
     r"\b(sari|saree|lehenga|salwar|kurti|kurta|dupatta|sherwani|dhoti|blouse|"
     r"dress|shirt|t-?shirt|jeans|suit|top|gown|uniform)\b", re.I)
-MODERN_DRESS = "Modern everyday clothing."
+# One fixed sentence produced one fixed outfit: measured on the live model,
+# "an indian man" and "an indian woman" at three seeds all came back in the same
+# light-blue shirt. Everything describing the PERSON was identical across seeds
+# — only the scene line varied — so the model collapsed to one archetype.
+# sari-variety and scene-variety already solve this with a per-seed pick; the
+# modern-dress default was never wired into the same machinery.
+MODERN_DRESS = "Modern everyday clothing."   # fallback when sex is unclear
+MENS_DRESS = [
+    "a plain cotton shirt with the sleeves rolled up",
+    "a fitted polo shirt and dark trousers",
+    "a checked casual shirt worn open over a plain tee",
+    "a simple round-neck t-shirt and jeans",
+    "a linen kurta worn with jeans",
+    "a light half-sleeve shirt tucked into chinos",
+    "a dark formal shirt worn without a tie",
+    "a zip-up sweatshirt over a plain tee",
+]
+WOMENS_DRESS = [
+    "a cotton kurti with leggings and a light dupatta",
+    "a printed A-line kurti and straight trousers",
+    "a plain top with high-waisted jeans",
+    "a casual salwar kameez in a solid colour",
+    "a short anarkali kurti with churidar",
+    "a simple blouse with a long printed skirt",
+    "a fitted t-shirt and a denim jacket",
+    "a loose linen shirt worn over trousers",
+]
+FEMALE_HINT = re.compile(r"\b(woman|women|girl|lady|ladies|her|she)\b", re.I)
 
 # --- 2b. venue for dance prompts -------------------------------------------
 # Fixing the classical-dance prior exposed a second failure: "dancing to music"
@@ -517,6 +544,38 @@ HOUSE_REGION = "North Indian appearance, "
 # the per-tone stacks; unrequested complexion is left alone.
 HOUSE_LOOK = ("sharp well-defined features, conventionally attractive, "
               "healthy glowing well-lit skin.")
+# Per-seed variants: same job as HOUSE_LOOK — attractive by default, the
+# documented house decision — but varying the face so three seeds do not return
+# the same person.
+#
+# These DO carry a complexion, reversing the earlier "no complexion in the house
+# look" rule, at explicit request. The flat no-complexion default produced one
+# repeated face; the answer to "always the same girl" and to "bring back fair"
+# is the same thing, a RANGE. A fixed fair default would make the sameness
+# worse. The range spans fair to deep, so fair appears often and never always.
+# Still fully gated: a stated complexion or a minor suppresses house-look
+# entirely and none of this is emitted.
+HOUSE_LOOKS = [
+    "an oval face with high cheekbones and fair skin, conventionally attractive",
+    "a round face with soft features and light wheatish skin, conventionally attractive",
+    "a heart-shaped face with large expressive eyes and fair skin, conventionally attractive",
+    "a slim angular face with a defined jawline and wheatish skin, conventionally attractive",
+    "a square face with strong brows and warm golden-brown skin, conventionally attractive",
+    "a soft oval face with a straight nose and light wheatish skin, conventionally attractive",
+    "a broad face with full lips and medium brown skin, conventionally attractive",
+    "delicate features with a narrow nose and fair skin, conventionally attractive",
+    "an open friendly face with wide-set eyes and warm brown skin, conventionally attractive",
+    "a long face with a straight nose and deep warm brown skin, conventionally attractive",
+]
+# Short form for SCENE prompts, where the long face description is what crops
+# the scene to a headshot. Few enough words not to move the camera.
+APPEARANCE_TERSE = [
+    "Oval face, fair skin.", "Round face, light wheatish skin.",
+    "Heart-shaped face, fair skin.", "Angular face, wheatish skin.",
+    "Square face, golden-brown skin.", "Soft oval face, light wheatish skin.",
+    "Broad face, medium brown skin.", "Narrow face, fair skin.",
+    "Wide-set eyes, warm brown skin.", "Long face, deep warm brown skin.",
+]
 HOUSE_LOOK_MALE = " Clean-shaven with a smooth bare upper lip and jawline."
 
 # --- 3. fragile attributes --------------------------------------------------
@@ -633,7 +692,13 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         # still-life bug NO_PEOPLE was added for: a rule firing on the presence
         # of India rather than the presence of a person.
         if not GARMENT.search(raw) and PERSON.search(raw):
-            add("modern-dress-default", MODERN_DRESS)
+            # Per-seed, so re-rolling varies the outfit instead of returning the
+            # same light-blue shirt every time.
+            male = bool(MALE.search(raw)) and not FEMALE_ONLY.search(raw)
+            female = bool(FEMALE_ONLY.search(raw)) or bool(FEMALE_HINT.search(raw))
+            lst = MENS_DRESS if male else (WOMENS_DRESS if female else None)
+            add("modern-dress-default",
+                f"Wearing {lst[_hash(raw + variant) % len(lst)]}." if lst else MODERN_DRESS)
             applied.append("modern-dress-default")
 
     # SETTING_NAMED, not VENUE. VENUE is the narrow original list, so "dancing
@@ -670,14 +735,16 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         # The clean-shaven default is grooming, not decoration — it survives
         # trimming even when the rest of the house look does not.
         if face_is_subject(raw):
-            add("house-look", region + HOUSE_LOOK + male_tail,
+            add("house-look",
+                region + HOUSE_LOOKS[_hash(raw + variant) % len(HOUSE_LOOKS)] + "." + male_tail,
                 keep=region + RULE_BUDGET["house-look"]["terse"] + male_tail)
             applied.append("house-look")
         else:
             # Scene prompt: keep identity and grooming, drop the beauty
             # description that would crop the scene away. Emit nothing when
             # both halves are empty rather than an empty sentence.
-            identity = (HOUSE_REGION_ALONE if region else "") + male_tail
+            terse = " " + APPEARANCE_TERSE[_hash(raw + variant) % len(APPEARANCE_TERSE)]
+            identity = (HOUSE_REGION_ALONE if region else "") + terse + male_tail
             if identity:
                 add("house-identity", identity, keep=identity)
                 applied.append("house-identity")
