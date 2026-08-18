@@ -61,9 +61,27 @@ CURL_LORA = "/src/loras/beenga_curl_v1.safetensors"
 # "make it night". On an edit the scenery goes entirely.
 EDIT_BUDGET_WORDS = 0
 
-# Word budget for GENERATION. 0 means: your prompt, the negation rewrites, the
-# reinforcements for what you actually asked for, and the contemporary default —
-# nothing else.
+# Word budget for GENERATION.
+#
+# Was 0 (Tier 1 only) because the full layer measured worse in 5 of 6 prompt
+# types. That measurement was real but it was about SCENE fidelity — crop,
+# setting, complexion — and it was reported as though it covered everything.
+# It never scored hair or skin, and on portraits the dropped rules were doing
+# real work. "Earlier was working well except crop" was an accurate report and
+# 0 threw out the good half with the bad.
+#
+# 60 is viable now only because of the face-is-subject gate (c376342): the
+# face-detail rules are ~30 words describing a face, and that description mass
+# moves the camera, which is what cropped scenes to headshots. They now fire
+# only when the face IS the subject, so a portrait gets its detail back and a
+# market keeps its market.
+#
+# Measured at this budget, 4 steps, seed 7: "an indian couple on a bed" renders
+# both figures whole and uncropped in a bedroom; "deep dark complexion" still
+# comes back deep; a delhi-market scene keeps its street.
+#
+# The edit path stays at 0 — see EDIT_BUDGET_WORDS. Scene defaults fight a
+# source image no matter how good the gate is.
 #
 # Measured across six prompt types, three seeds, images compared side by side.
 # The full layer added ~65 uninvited words and was worse in 5 of 6:
@@ -82,7 +100,7 @@ EDIT_BUDGET_WORDS = 0
 # the other half of why the defaults kept breaking on mela, bed, farmer, office.
 #
 # Set to false to restore the old behaviour for comparison.
-GENERATE_BUDGET_WORDS = 0
+GENERATE_BUDGET_WORDS = 60
 
 # Matches the upstream Klein model's documented ceiling.
 MAX_REFERENCE_IMAGES = 5
