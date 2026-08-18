@@ -198,10 +198,53 @@ const NEGATIVE = [
   ["an indian woman near bushes",            "house-identity"],
   ["an indian woman, a serious matter",      "house-identity"],
   ["an indian woman on the top storey",      "house-identity"],
+  // A stated plain background must not get "Background in clear focus with
+  // visible detail" appended over it. Same shape as daylight vs "at night".
+  ["an indian woman, plain background",       "deep-focus"],
+  ["an indian woman, white background",       "deep-focus"],
+  ["an indian woman against a plain wall",    "deep-focus"],
   // KNOWN AND ACCEPTED: "model" is a person word because "a model in a sari" is
   // the common case in this domain. "a model train" is collateral, pre-dates
   // today's expansion, and is not worth breaking the common case for.
 ];
+
+// ── positive probes: settings that MUST be recognised ───────────────────────
+//
+// The negative probes above catch a list that is too WIDE. This catches one
+// that is too NARROW, and nothing here caught it before: tightening the
+// SETTING_NAMED wildcard to plurals silently dropped "marketplace", "hillside"
+// and "hilltop", and "seaside" had never matched at all.
+//
+// A missed setting is worse than a spurious one. When SETTING_NAMED does not
+// see the scene the user named, scene-variety appends a DIFFERENT scene on top
+// of it — that is the reported "couple on a bed, rendered in front of a
+// building". Every setting word the layer claims to know belongs here.
+const SETTINGS_MUST_MATCH = [
+  "on a bed", "on beds", "on a charpai", "on a chair", "on a scooter", "in an auto",
+  "on a rooftop", "on the rooftops", "on a terrace", "on a balcony", "in a courtyard",
+  "at a mela", "at a ghat", "at the ghats", "at a dhaba", "at a chowk", "in a bazaar",
+  "at a market", "at the markets", "in a marketplace",
+  "in a village", "in villages", "in a field", "in the fields", "at a factory",
+  "in a bedroom", "in the kitchen", "in a salon", "in a temple", "at the temples",
+  "at a railway platform", "at a stadium", "on a boat", "in a forest", "at a beach",
+  "on a hillside", "on a hilltop", "at the seaside", "by the roadside", "in the countryside",
+  // A stated background is a stated setting. RW-DEEP ("plain background") was
+  // having a market appended over it before these were added.
+  "against a plain background", "against a white background", "with a blurred background",
+  "against a grey seamless backdrop", "against a wall",
+];
+let posFails = 0;
+for (const setting of SETTINGS_MUST_MATCH) {
+  const prompt = `an indian woman ${setting}`;
+  const ids = new Set(enhance(prompt, { variant: "11" }).applied.map((a) => a.split(":")[0]));
+  // scene-variety only fires when SETTING_NAMED saw nothing.
+  if (ids.has("scene-variety")) {
+    posFails++;
+    console.log(`  SETTING NOT SEEN  ${JSON.stringify(setting)} — scene-variety would override it`);
+  }
+}
+console.log(posFails ? `\n${posFails} settings unrecognised`
+                     : `positive probes: ${SETTINGS_MUST_MATCH.length} settings recognised`);
 
 let negFails = 0;
 for (const [prompt, rule] of NEGATIVE) {
@@ -210,4 +253,4 @@ for (const [prompt, rule] of NEGATIVE) {
 }
 console.log(negFails ? `\n${negFails} false positives` : `\nnegative probes: ${NEGATIVE.length} clean`);
 
-process.exit(violations.length || missing.length || negFails ? 1 : 0);
+process.exit(violations.length || missing.length || negFails || posFails ? 1 : 0);

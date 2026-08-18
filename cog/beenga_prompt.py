@@ -384,7 +384,25 @@ SETTING_NAMED = re.compile(VENUE.pattern +
                            r"countertop|counter|dresser|nightstand)(?:s|es)?\b"
                            r"|\b(market|bazaar|temple|gym|shop|beach|hill|"
                            r"mountain|village|farm|airport|hospital|library|museum|stadium|"
-                           r"terrace)(?:s|es)?\b", re.I)
+                           r"terrace)(?:s|es)?\b"
+                           # Compound settings the old \w* reached by accident.
+                           # Listed, not wildcarded: marketplace, hillside and
+                           # hilltop regressed when the wildcard went, seaside
+                           # never matched. A missed setting means scene-variety
+                           # overrides the scene the user named — the "bed in
+                           # front of a building" failure.
+                           # A stated BACKGROUND is a stated setting. Without
+                           # these, "deep dark complexion, plain background" had
+                           # scene-variety append a market over the plain
+                           # background asked for — same failure as "couple on a
+                           # bed in front of a building".
+                           r"|\b(background|backdrop|seamless|plain\s+wall|"
+                           r"blank\s+wall|against\s+a\s+wall|against\s+the\s+wall|"
+                           r"studio\s*setup|no\s+background)\b"
+                           r"|\b(marketplace|hillside|hilltop|hillock|seaside|"
+                           r"seashore|seafront|roadside|wayside|lakeside|"
+                           r"mountainside|countryside|waterfront|dockside|"
+                           r"streetside|kerbside|curbside)\b", re.I)
 SCENES = [
     "a busy neighbourhood street with shopfronts and parked scooters",
     "a leafy residential lane with low boundary walls",
@@ -413,6 +431,14 @@ SCENES = [
 DOF = re.compile(r"\b(depth\s+of\s+field|bokeh|blurred?\s+background|shallow\s+focus|"
                  r"f/1|f1\.|portrait\s+lens|cinematic)\b", re.I)
 DEEP_FOCUS = "Background in clear focus with visible detail."
+# A caller who asked for a PLAIN background does not want "visible detail" in
+# it. RW-DEEP is "deep dark complexion, plain background" and the layer was
+# appending exactly that contradiction — same shape as appending "Bright
+# natural daylight" to "make it night". A stated background wins.
+PLAIN_BACKGROUND = re.compile(
+    r"\b(plain|blank|solid|seamless|white|grey|gray|black|neutral|studio)\s+"
+    r"(background|backdrop|wall)\b|\bno\s+background\b|"
+    r"\bagainst\s+a\s+(plain|blank|white|grey|gray|solid)\b", re.I)
 
 
 def _hash(s):
@@ -644,7 +670,7 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         add("scene-variety", f"The setting is {SCENES[_hash(raw + variant) % len(SCENES)]}.")
         applied.append("scene-variety")
 
-    if not DOF.search(raw):
+    if not DOF.search(raw) and not PLAIN_BACKGROUND.search(raw):
         add("deep-focus", DEEP_FOCUS)
         applied.append("deep-focus")
 
