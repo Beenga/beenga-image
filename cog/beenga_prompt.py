@@ -252,7 +252,13 @@ HAIR_REALISM = ("Fine individual hair strands visible, wispy flyaway hairs catch
 # "morning", "afternoon", "noon" are deliberately NOT here. They imply light without
 # contradicting it, and Klein's unlit exposure is flat and grey — a morning prompt
 # still wants the daylight line. Only words that fight it belong in this list.
-LIGHTING = re.compile(r"\b(light|lighting|lit|sunset|sunrise|golden\s+hour|night|dusk|"
+# sunlight/daylight/sunlit spelled out: `light` cannot match inside a compound
+# (no word boundary in "sunlight"), so "Natural morning sunlight" was getting
+# "Bright natural daylight" appended on top of it. "moonlight" and "night" were
+# listed and worked; the daytime counterparts were missed. Not `sun\w*` — that
+# would match sunday and sunflower.
+LIGHTING = re.compile(r"\b(sunlight|sunlit|daylight|sunshine|sunny|"
+                      r"light|lighting|lit|sunset|sunrise|golden\s+hour|night|dusk|"
                       r"dawn|evening|twilight|midnight|moonlit|moonlight|firelight|"
                       r"lantern|candlelit|shade|shadow|backlit|neon|candle|lamp|studio|"
                       r"overcast|cloudy|moody|dim|gloom|dark|silhouette)\w*\b", re.I)
