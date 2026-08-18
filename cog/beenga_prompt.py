@@ -688,7 +688,7 @@ RULE_BUDGET = {
         # India is ceremonial. Every other default stripped scenes, cropped
         # bodies or lightened complexions.
         "tier": 3, "always": True, "full": CONTEMPORARY,
-        "terse": "Present-day India, modern surroundings.",
+        "terse": "Present-day India, modern surroundings, current-day clothing and styling.",
     },
     "house-look": {
         "tier": 3, "full": HOUSE_LOOK,
@@ -696,7 +696,10 @@ RULE_BUDGET = {
     },
     "deep-focus": {"tier": 3, "full": DEEP_FOCUS, "terse": "Background in focus."},
     "daylight-default": {"tier": 3, "full": DAYLIGHT, "terse": None},
-    "modern-dress-default": {"tier": 3, "full": MODERN_DRESS, "terse": None},
+    # always too, and only three words. Dropping it sent "indian woman cooking"
+    # back into a sari — the ceremonial prior this project exists to counter.
+    "modern-dress-default": {"tier": 3, "always": True, "full": MODERN_DRESS,
+                             "terse": None},
 
     # Tier 2: conditional on what the user said
     "modest-drape": {
