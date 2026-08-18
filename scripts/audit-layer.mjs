@@ -203,6 +203,13 @@ const NEGATIVE = [
   ["an indian woman, plain background",       "deep-focus"],
   ["an indian woman, white background",       "deep-focus"],
   ["an indian woman against a plain wall",    "deep-focus"],
+  // A named photographic treatment already decides lighting and depth of field.
+  ["an indian bride, editorial photography",  "daylight-default"],
+  ["an indian bride, editorial photography",  "deep-focus"],
+  ["an indian woman, fashion shoot",          "deep-focus"],
+  // A stated minor must never get the young-adult age push.
+  ["a 12 year old indian girl",               "reinforce"],
+  ["indian girl aged 14",                     "reinforce"],
   // KNOWN AND ACCEPTED: "model" is a person word because "a model in a sari" is
   // the common case in this domain. "a model train" is collateral, pre-dates
   // today's expansion, and is not worth breaking the common case for.

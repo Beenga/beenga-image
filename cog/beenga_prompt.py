@@ -431,6 +431,15 @@ SCENES = [
 DOF = re.compile(r"\b(depth\s+of\s+field|bokeh|blurred?\s+background|shallow\s+focus|"
                  r"f/1|f1\.|portrait\s+lens|cinematic)\b", re.I)
 DEEP_FOCUS = "Background in clear focus with visible detail."
+# A caller who named a photographic TREATMENT has already decided the lighting
+# and the depth of field. "bride ... luxury wedding venue, editorial photography"
+# came back in flat outdoor daylight with everything in focus, because neither
+# daylight-default nor deep-focus recognised "editorial" — the same override
+# shape as appending daylight to "make it night".
+PHOTO_STYLE_STATED = re.compile(
+    r"\b(editorial|lookbook|campaign|fashion\s+(shoot|photography)|glamour|"
+    r"studio\s+(lit|light|lighting)|golden\s+hour|backlit|rim\s+light|"
+    r"soft\s+focus|dreamy|moody|candle\s*lit|fairy\s+lights)\b", re.I)
 # A caller who asked for a PLAIN background does not want "visible detail" in
 # it. RW-DEEP is "deep dark complexion, plain background" and the layer was
 # appending exactly that contradiction — same shape as appending "Bright
@@ -533,6 +542,10 @@ def _wants_clean_shaven(raw):
 # One stack PER complexion, deliberately. A blanket darkening rule would push
 # every tone dark, which is the lightening bias mirrored — wheatish and medium
 # must still land mid-range.
+_YOUNG_ADULT = re.compile(
+    r"\b(girl|young(\s+\w+){0,2}\s+(woman|man|lady|guy|boy|girl)|teenager|"
+    r"college\s+student|in\s+(her|his)\s+(early\s+)?twenties)\b", re.I)
+
 FRAGILE = [
     (_wants_clean_shaven, SHAVE_STACK),
     # "beautiful modern delhi lady in 20s" returned a European face. A city name
@@ -545,7 +558,13 @@ FRAGILE = [
     # "beautiful delhi girl in sari" rendered a woman around thirty, on the raw
     # model as well as through this layer — Klein maps youth words to roughly 30
     # whatever you type. Same fix as clean-shaven and complexion: stack it.
-    (re.compile(r"\b(girl|young(\s+\w+){0,2}\s+(woman|man|lady|guy|boy|girl)|teenager|college\s+student|in\s+(her|his)\s+(early\s+)?twenties)\b", re.I),
+    # NEVER on a prompt that states a minor. "girl" is deliberately absent from
+    # MINOR because Indian English uses it for a young woman ("delhi girl"), and
+    # that is what this rule is for — but with no MINOR guard the rule also fired
+    # on "a 12 year old indian girl" and asserted "clearly a young adult in their
+    # early twenties" over a stated age of 12. MINOR already matches a stated age
+    # below 18; this rule simply never consulted it.
+    (lambda raw: (not MINOR.search(raw)) and bool(_YOUNG_ADULT.search(raw)),
      "Clearly a young adult in their early twenties, youthful unlined face, smooth taut young skin, visibly in their early 20s."),
     (re.compile(r"\b(soft|loose|salon|blowout|beauty-?parlou?r)\s+(curls?|waves?)\b", re.I),
      "The hair falls in wide relaxed S-shaped waves with long gentle bends and plenty of loose movement."),
@@ -656,7 +675,7 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         add("hair-realism", HAIR_REALISM)
         applied.append("hair-realism")
 
-    if not LIGHTING.search(raw):
+    if not LIGHTING.search(raw) and not PHOTO_STYLE_STATED.search(raw):
         add("daylight-default", DAYLIGHT)
         applied.append("daylight-default")
 
@@ -670,7 +689,8 @@ def enhance(raw, contemporary=True, reinforce=True, variant="", budget=False):
         add("scene-variety", f"The setting is {SCENES[_hash(raw + variant) % len(SCENES)]}.")
         applied.append("scene-variety")
 
-    if not DOF.search(raw) and not PLAIN_BACKGROUND.search(raw):
+    if (not DOF.search(raw) and not PLAIN_BACKGROUND.search(raw)
+            and not PHOTO_STYLE_STATED.search(raw)):
         add("deep-focus", DEEP_FOCUS)
         applied.append("deep-focus")
 
