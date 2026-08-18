@@ -179,8 +179,16 @@ class Predictor(BasePredictor):
             default=[],
         ),
         aspect_ratio: str = Input(
-            description="Output shape. Ignored when editing — the source image's "
-                        "dimensions are kept.",
+            # 1:1 is the worst shape for a standing full-length person and it is
+            # the default. Measured on the same prompt and seed at 4 steps: 1:1
+            # returned two braids where one was asked for and muddled the hands;
+            # 3:4 returned a single braid and correctly clasped hands. A square
+            # frame makes the model compress a standing figure, and the damage
+            # lands on the small high-frequency parts — hands and hair.
+            description="Output shape. For a standing full-length person prefer "
+                        "3:4 or 9:16 — a square frame compresses the figure and "
+                        "hands and hair suffer for it. Ignored when editing — "
+                        "the source image's dimensions are kept.",
             choices=["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
             default="1:1",
         ),
@@ -189,7 +197,22 @@ class Predictor(BasePredictor):
             ge=1, le=50, default=4,
         ),
         guidance_scale: float = Input(
-            description="Prompt adherence strength",
+            # Kept only so existing callers do not break. It has NO EFFECT.
+            #
+            # Flux2KleinPipeline gates real classifier-free guidance on
+            #   do_classifier_free_guidance = guidance_scale > 1
+            #                                 and not self.config.is_distilled
+            # and the checkpoint we serve has is_distilled: True in its
+            # model_index.json, so the branch never runs and the value is
+            # discarded. Verified against the live endpoint: guidance 0, 3.5, 7
+            # and 10 at a fixed seed all returned the SAME image, byte for byte.
+            #
+            # This also rules out negative prompting on this checkpoint — the
+            # negative branch is what CFG would have run, and it never executes.
+            # Steering away from extra limbs has to come from the prompt or from
+            # step count, not from a negative prompt.
+            description="No effect on this checkpoint — the distilled model "
+                        "ignores guidance. Kept for API compatibility.",
             ge=0.0, le=10.0, default=3.5,
         ),
         seed: Optional[int] = Input(
