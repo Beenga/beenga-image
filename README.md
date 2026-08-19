@@ -138,7 +138,8 @@ curl -s -X POST https://api.replicate.com/v1/predictions \
 |---|---|---|
 | `prompt` | — | Write it plainly. The layer handles the phrasing. |
 | `beenga_prompt_layer` | `true` | Turn off to see the raw FLUX.2 Klein behaviour — this is how the before/after tables above were produced. |
-| `aspect_ratio` | `1:1` | `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3` |
+| `aspect_ratio` | `1:1` | `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`. **Prefer `3:4` or `9:16` for a standing full-length person** — a square frame compresses the figure and the damage lands on hands and hair. Same prompt and seed at 4 steps: `1:1` returned two braids where one was asked for and muddled the hands; `3:4` returned a single braid and correct hands. |
+| `guidance_scale` | `3.5` | **No effect.** The distilled checkpoint disables classifier-free guidance, so the value is discarded — guidance `0`, `3.5`, `7` and `10` at a fixed seed return the same image byte for byte. Kept for API compatibility. It also means negative prompts are unavailable on this model. |
 | `num_inference_steps` | `4` | The distilled checkpoint is tuned for 4. |
 | `seed` | random | Fix it and the same prompt reproduces byte-for-byte. |
 | `curl_enhance` | `false` | Opt-in curl adapter. Read the caveats in [MODEL_CARD.md](MODEL_CARD.md) before enabling it. |

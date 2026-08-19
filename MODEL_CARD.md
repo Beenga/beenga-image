@@ -165,6 +165,12 @@ Regional facial diversity beyond this is a fine-tune target, not a prompt target
 - The complexion measurement is not calibrated to any standard skin-tone scale; only the
   ordering is meaningful, and at the light end the per-seed spread exceeds the gap between
   adjacent tones.
+- **Hands and fingers are unreliable at the shipped 4 steps, and the failure RATE is not
+  measured.** Extra or fused fingers appear seed-dependently. Raising steps to 16 produced
+  clean hands on three prompts, but steps are fixed at 4 for cost. Framing helps — `3:4`
+  beats the default `1:1` on the same prompt and seed. Negative prompting is unavailable: the
+  distilled checkpoint disables classifier-free guidance, so `guidance_scale` has no effect at
+  all. Every claim in this repository about hands is "N for N on one prompt"; none is a rate.
 
 ## Safety
 
@@ -173,6 +179,22 @@ Beenga Image does not currently introduce an independent safety or moderation la
 The prompt layer deliberately supplies *contemporary* defaults for Indian scenes. That is an
 editorial choice, and it is a substitution of one default for another — made because the
 measured baseline skewed heavily ceremonial, not because it is neutral.
+
+**Appearance defaults, restated 2026-08-18.** When a prompt names a person and does *not*
+state a complexion, the layer supplies a face description drawn per-seed from a fixed set of
+ten variants. Those variants carry complexions spanning fair to deep. This replaced an earlier
+design that supplied no complexion at all.
+
+Stated plainly, because it is the kind of change that should not be discovered by reading a
+diff: there is **no fair-by-default** — fair appears in the set and is never the default — but
+neither is the layer silent on complexion any more. The change was made because omission had a
+cost that was not anticipated: a single fixed face sentence produced a single repeated face
+across seeds, which is its own form of narrowness. Variation replaced omission.
+
+The set is in `HOUSE_LOOKS` in `lib/prompt.mjs` and its Python twin. Anyone auditing this
+should read the spread of that list rather than infer behaviour from the absence of a default.
+A stated complexion, or any prompt naming a minor, suppresses the whole house look and none of
+it is emitted.
 
 ## Licence & attribution
 

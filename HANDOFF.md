@@ -1,6 +1,45 @@
-# Handoff — 2026-08-16
+# Handoff — 2026-08-18
 
-State of play after one long session. Read this before touching anything.
+State of play. Read this before touching anything.
+
+## Current state (2026-08-18)
+
+- **Live on Replicate:** version `a89289ee966c`, public, verified with real
+  predictions — not just "the push succeeded". A `cog push` returning a digest proves
+  nothing: version `91361ddc` pushed cleanly and was then disabled for failing setup.
+  **Always confirm with an actual prediction.**
+- **Git:** `origin/main` in sync.
+- **Generation budget:** 60 (`GENERATE_BUDGET_WORDS`). Edit path stays at 0 — scene
+  defaults fight a source image regardless of how good the gates are.
+- **Build droplet:** created by `scripts/deploy.sh --go`, deliberately NOT destroyed by
+  it. Destroy it yourself once satisfied; keeping it makes the next push ~40s instead
+  of a cold rebuild.
+
+### Two things that will waste your time if you don't know them
+
+- **`guidance_scale` does nothing.** `Flux2KleinPipeline` gates real classifier-free
+  guidance on `guidance_scale > 1 and not config.is_distilled`, and our checkpoint has
+  `is_distilled: True`. Verified: guidance 0, 3.5, 7 and 10 at a fixed seed return the
+  same image BYTE FOR BYTE. This also means **negative prompts are impossible** here —
+  the negative branch is what CFG would have run. Steering away from extra limbs has to
+  come from the prompt, the framing, or the step count.
+- **`aspect_ratio: "1:1"` is the default and the worst choice for a standing person.**
+  Same prompt and seed at 4 steps: 1:1 returned two braids where one was asked for and
+  muddled the hands; 3:4 returned a single braid and correct hands. A square frame
+  compresses a standing figure and the damage lands on hands and hair. The default has
+  NOT been changed — it alters output shape for every caller.
+
+### Open, not done
+
+- Default aspect ratio 1:1 → 3:4. Free, biggest remaining win, changes every caller.
+- Hands remain seed-dependent at 4 steps. Steps fix it (4 → 16 measured clean on 3
+  prompts) but were ruled out on cost. **There is still no failure RATE for this** —
+  every claim in this repo about hands is "N for N on one prompt". That gap is why the
+  same argument keeps recurring; a VLM judge scoring hands/fingers would end it.
+- The "teenager" adult-push was removed as part of the minor-safety fix, which reverses
+  a decision recorded in the code comments. Flagged to the owner, not re-confirmed.
+- Replicate showcase examples are stale — example [9] still requests "fair female" and
+  the cover is the bride, so nothing on the page demonstrates the deep-complexion work.
 
 ## What exists
 
@@ -85,10 +124,21 @@ and slow. **Stay on Klein.**
 
 ## Known problems, unfixed
 
-1. **Prompt dilution.** The layer appends ~120 words across a dozen rules to a short
-   prompt. That is the exact attribute-dilution this project exists to fix, created by
-   adding a rule per piece of feedback. Needs a length budget: terse defaults, full
-   strength only for attributes the user explicitly asked for.
+1. **Prompt dilution — addressed, then over-corrected, then re-balanced (2026-08-18).**
+   The length budget landed (`RULE_BUDGET`, tiers 1-3, `GENERATE_BUDGET_WORDS`). It was
+   first set to 0 — Tier 1 only — on a measurement showing the full layer worse in 5 of
+   6 prompt types. That measurement was real but scored SCENE fidelity only: crop,
+   setting, complexion. It never scored hair or skin, and it was reported as a verdict
+   on the whole layer. On portraits the dropped rules were doing real work, and "it used
+   to be better except the crop" was an accurate report.
+
+   The actual cause of the crop was narrower: `house-look` and `hair-realism` are ~30
+   words describing a face, and that description mass MOVES THE CAMERA — it cropped a
+   market scene to a headshot, and adding `FULL_FRAME` on top did not pull it back.
+   Nine words of framing cannot out-vote thirty words of face. Fixed by gating on
+   `faceIsSubject()` rather than by deletion, and the budget is now 60.
+
+   Standing lesson: a measurement that scores one axis is not a verdict on every axis.
 2. **Two implementations by hand.** JS and Python drift constantly. Consider generating
    one from the other, or moving the layer server-side only. (`fal/beenga_prompt.py` is
    a symlink to the cog copy, not a third implementation — keep it that way, and
@@ -115,12 +165,46 @@ and slow. **Stay on Klein.**
    who wrote the rules. **When a new consumer starts using the model, read what it
    actually sends before assuming the layer suits it.**
 
+   **2026-08-18, two more blind spots, both found only by using the product:**
+
+   *Every benchmark case runs at the DEFAULT variant.* So a per-seed bug is structurally
+   invisible to the suite. Raising the budget to 60 started sending a full description
+   of the person in which every word was a CONSTANT — one outfit sentence, one face
+   sentence — and three seeds of "an indian man" came back as the same face in the same
+   light-blue shirt. Parity was 41/41 throughout. Fixed by wiring face and dress into
+   the same per-seed picker `sari-variety` already used; parity on the new paths has to
+   be checked ACROSS SEEDS explicitly, because the suite never will.
+
+   *`scripts/audit-layer.mjs` had only negative probes*, so it tested for a vocabulary
+   list that was too WIDE and was blind to one too NARROW. Tightening the
+   `SETTING_NAMED` wildcard silently dropped "marketplace", "hillside" and "hilltop",
+   and a missed setting is worse than a spurious one — `scene-variety` then paves a
+   different scene over the one the caller named, which is the reported "couple on a bed
+   in front of a building". The audit now carries 45 POSITIVE probes as well: every
+   setting the layer claims to know must survive `scene-variety`.
+
+   The generalisation of both: **a green check only covers the axis it was written to
+   cover.** Ask what a passing suite is structurally incapable of seeing.
+
 ## Product decisions taken
 
 - Attractive-by-default: **kept**. Every image model does it; "farmer" overrides it.
-- Fair-by-default: **dropped**. It repeats the bias this project measured and fixed in
-  other models, in a market where skin-lightening is a live controversy, and it removes
-  the differentiator. Requested tones render correctly and are measured monotonic.
+- Fair-by-default: **still dropped — but the house look now carries a complexion
+  RANGE, which is a real change from "no complexion default at all" (2026-08-18).**
+  The original decision was that defaulting fair repeats the bias this project measures
+  in other models, in a market where skin-lightening is a live controversy. That still
+  holds and there is still no fair default.
+
+  What changed: emitting no complexion at all meant the house look was one fixed
+  sentence, and one fixed sentence produced one repeated face — three seeds of
+  "an indian woman" came back as the same person. `HOUSE_LOOKS` now holds ten face
+  variants picked per seed, each carrying a complexion spanning fair to deep. Fair
+  comes up often and never always. A stated complexion, or a prompt naming a minor,
+  still suppresses the house look entirely.
+
+  Read that as: the anti-bias decision is intact, the mechanism moved from *omission*
+  to *variation*. Anyone auditing this should look at the spread of `HOUSE_LOOKS`, not
+  at the absence of a default.
 - North Indian default: kept, overridden by any southern or eastern place name.
 - LoRA: opt-in `curl_enhance` only. It leaks — shifts unspecified hair toward curly and
   drags its training set's flatter look into unrelated scenes.

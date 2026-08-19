@@ -58,7 +58,7 @@ Neither the base model nor its peers know the iconography without being told. Ic
 | `beenga_prompt_layer` | `true` | Turn off to see the raw base model's behaviour. This is how the comparisons above were produced — flip it to check them yourself. |
 | `aspect_ratio` | `1:1` | `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3` |
 | `num_inference_steps` | `4` | The distilled checkpoint is tuned for 4. |
-| `guidance_scale` | `3.5` | Ignored by the distilled model, which is step-wise distilled. |
+| `guidance_scale` | `3.5` | **No effect** — the distilled checkpoint disables classifier-free guidance. Verified: `0`, `3.5`, `7` and `10` at a fixed seed return the same image byte for byte. Negative prompts are therefore unavailable. |
 | `seed` | random | Fix it and the same prompt reproduces byte-for-byte. Re-rolling varies unspecified garment choices. |
 | `curl_enhance` | `false` | Opt-in curl adapter. Read the caveat below before enabling. |
 | `output_format` | `png` | `png`, `jpg`, `webp` |
